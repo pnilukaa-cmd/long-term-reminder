@@ -1,6 +1,10 @@
 # renewal-reminder
 
-**Pitch:** An Android app that tracks expiry and renewal dates for the documents people forget about — passports, driving licences, insurance, MOT/registration, warranties, professional certifications — and reminds them early enough to actually do something about it.
+**Pitch:** An Android app for the renewals that actually hurt when you miss them — MOT, insurance, passport, professional registration. It reminds you on a ladder that starts early enough to act, and keeps track of whether you've actually done it.
+
+**Positioning (revised after first research pass — read this before scoping):** this is deliberately *not* an all-in-one document tracker, and "everything stays on your phone" is not the pitch. Both of those are the category default: at least eight named competitors already claim whole-category coverage, and all of them already lead with the local-only privacy claim. One (Travel Document Vault) already ships a staggered passport reminder ladder.
+
+The defensible ground is narrower: **high-consequence renewals, a cadence that escalates properly, and follow-through state** — knowing that you were reminded, and whether you acted. Breadth and privacy are table stakes to match, not reasons anyone switches.
 
 ## Template provenance
 
@@ -39,8 +43,10 @@ These came from the research that led to this project existing. They are inputs 
 - **Monetization shape: one-time unlock, not ads or subscription.** At the target revenue scale, a one-time unlock needs roughly 10–25 sales a month; ad-supported needs 1,600–3,500 monthly active users for the same money. The unlock model also doesn't depend on retention.
 - **Google Play gate:** personal developer accounts created after Nov 2023 must run a closed test with 12 testers, continuously opted in for 14 consecutive days, before a production release. This is calendar time on the critical path and should be scheduled, not discovered late.
 - **Local-first is a real architectural argument, not a preference.** Play defines "collection" as data leaving the device; if nothing syncs, the Data Safety disclosure surface is much smaller.
-- **Android 13+ requires a runtime permission for notifications.** Ask for it at a moment the user understands why — after they add their first item, not on first launch.
-- **The main competitive risk is "why not just use a calendar reminder?"** The product's answer has to be the prompting and the cadence, not the storage. Whatever v1 becomes, it should make that answer obvious.
+- **Two Android permission gates, not one.** Android 13+ requires a runtime permission for notifications, *and* Android 13/14+ deny `SCHEDULE_EXACT_ALARM` by default to non-exempt apps. The second lands directly on the app's core job — firing a reminder months out. `developer` should establish early what actually survives Doze and inexact alarms, because the answer may constrain the whole cadence design.
+- **The calendar objection is only partly answerable, and we should not pretend otherwise.** Prospective-memory research gives a real mechanical argument that a bare calendar entry underperforms — it doesn't bind to an actionable moment and doesn't escalate when dismissed. But no organic user voices were found describing calendar reminders actually failing them for these documents. Treat "cadence design plus follow-through state" as the strongest available answer, not an evidence-backed one.
+- **Notification fatigue caps how hard we can lean on reminding.** Users disable notifications or uninstall after as few as 2–6 unwanted pushes a week. "Remind harder" is a losing strategy; the ladder has to earn each interruption.
+- **Do not chase live-data vehicle apps.** UK competitors (Autodue, PitSync, CarFile) pull live DVLA data, which a local-only app structurally cannot match. Explicit v1 de-scope.
 
 ## Working agreements
 
