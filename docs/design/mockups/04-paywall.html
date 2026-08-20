@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>renewal-reminder — Paywall / Upgrade</title>
+<style>
+:root{
+  --md-primary:#4256E5; --md-on-primary:#FFFFFF; --md-primary-container:#DEE1FF; --md-on-primary-container:#00135A;
+  --md-secondary:#5C5D72; --md-secondary-container:#E1E0F9; --md-on-secondary-container:#191A2C;
+  --md-surface:#FBF8FF; --md-surface-dim:#DBD9E3; --md-surface-container-lowest:#FFFFFF; --md-surface-container-low:#F5F2FA;
+  --md-surface-container:#EFEDF6; --md-surface-container-high:#E9E7F1; --md-surface-container-highest:#E3E1EC;
+  --md-on-surface:#1B1B23; --md-on-surface-variant:#46464F; --md-outline:#777680; --md-outline-variant:#C7C5D0;
+  --md-error:#BA1A1A; --md-error-container:#FFDAD6; --md-on-error:#FFFFFF; --md-on-error-container:#410002;
+  --md-warning:#8A5300; --md-warning-container:#FFDEA6; --md-on-warning-container:#2A1800;
+  --md-success:#146C2E; --md-success-container:#B6F2C4; --md-on-success-container:#002109;
+  --cat-passport-c:#D3E4FF; --cat-passport-on:#001C3B;
+  --shape-xs:8px; --shape-sm:12px; --shape-md:16px; --shape-lg:20px; --shape-xl:28px; --shape-full:999px;
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:24px; --sp-6:32px; --sp-7:48px;
+  --font:'Google Sans','Roboto',system-ui,-apple-system,'Segoe UI',sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--font);background:#eef0f6;color:var(--md-on-surface);padding:var(--sp-6)}
+h1{font-size:24px;margin:0 0 4px}
+p.sub{color:var(--md-on-surface-variant);margin:0 0 var(--sp-5);max-width:780px;line-height:1.5}
+a.back{color:var(--md-primary);font-size:13px;text-decoration:none}
+.tabs input{display:none}
+.tabbar{display:flex;gap:var(--sp-2);margin-bottom:var(--sp-5);flex-wrap:wrap}
+.tabbar label{cursor:pointer;padding:8px 16px;border-radius:var(--shape-full);background:var(--md-surface-container-lowest);border:1px solid var(--md-outline-variant);font-size:13px;font-weight:600;color:var(--md-on-surface-variant)}
+.panel{display:none}
+#s1:checked ~ .stage .p1{display:block}
+#s2:checked ~ .stage .p2{display:block}
+#s3:checked ~ .stage .p3{display:block}
+#s4:checked ~ .stage .p4{display:block}
+#s1:checked ~ .tabbar label[for=s1],
+#s2:checked ~ .tabbar label[for=s2],
+#s3:checked ~ .tabbar label[for=s3],
+#s4:checked ~ .tabbar label[for=s4]{background:var(--md-primary);color:var(--md-on-primary);border-color:var(--md-primary)}
+.device{width:390px;height:790px;background:var(--md-surface);border-radius:36px;box-shadow:0 12px 40px rgba(20,20,40,.18);overflow:hidden;display:flex;flex-direction:column;border:8px solid #1c1c1e;position:relative}
+.statusbar{height:28px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;font-size:12px;font-weight:600;flex:none}
+.appbar{padding:var(--sp-2) var(--sp-4) 0;display:flex;align-items:center;gap:var(--sp-3);flex:none}
+.icon-btn{width:40px;height:40px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:var(--md-surface-container-high);color:var(--md-on-surface-variant);flex:none}
+.icon-btn svg{width:19px;height:19px}
+.content{flex:1;overflow-y:auto;padding:var(--sp-2) var(--sp-5) var(--sp-6);text-align:center}
+.hero-icon{width:64px;height:64px;border-radius:var(--shape-xl);background:var(--md-primary-container);color:var(--md-on-primary-container);display:flex;align-items:center;justify-content:center;margin:var(--sp-4) auto var(--sp-4)}
+.hero-icon svg{width:30px;height:30px}
+.content h3{font-size:21px;margin:0 0 8px;font-weight:700}
+.content .lede{font-size:13.5px;color:var(--md-on-surface-variant);line-height:1.5;margin:0 0 var(--sp-5)}
+.compare{background:var(--md-surface-container-lowest);border:1px solid var(--md-outline-variant);border-radius:var(--shape-lg);padding:var(--sp-4);text-align:left;margin-bottom:var(--sp-5)}
+.crow{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--md-outline-variant)}
+.crow:last-child{border-bottom:none}
+.crow svg{width:18px;height:18px;flex:none;margin-top:1px}
+.crow.have svg{color:var(--md-success)}
+.crow.locked svg{color:var(--md-outline)}
+.crow b{display:block;font-size:13px;margin-bottom:1px}
+.crow span{font-size:11.5px;color:var(--md-on-surface-variant)}
+.price{font-size:30px;font-weight:800;margin:0 0 2px}
+.price small{font-size:13px;font-weight:600;color:var(--md-on-surface-variant)}
+.note{font-size:11px;color:var(--md-on-surface-variant);margin-bottom:var(--sp-5)}
+.btn{padding:15px 22px;border-radius:var(--shape-full);font-size:15px;font-weight:700;border:none;width:100%;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-filled{background:var(--md-primary);color:var(--md-on-primary)}
+.btn-text{background:none;color:var(--md-primary);font-size:13px;padding:12px;font-weight:700}
+.saving-spinner{width:18px;height:18px;border-radius:999px;border:2.5px solid rgba(255,255,255,.35);border-top-color:#fff;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.skel{border-radius:var(--shape-lg);background:linear-gradient(90deg,var(--md-surface-container-high) 25%,var(--md-surface-container) 37%,var(--md-surface-container-high) 63%);background-size:400px 100%;animation:shimmer 1.4s infinite linear;margin-bottom:var(--sp-3)}
+@keyframes shimmer{0%{background-position:-200px 0}100%{background-position:200px 0}}
+.error-box{background:var(--md-error-container);color:var(--md-on-error-container);border-radius:var(--shape-md);padding:12px 14px;font-size:12.5px;text-align:left;margin-bottom:var(--sp-4);display:flex;gap:8px;align-items:flex-start}
+.error-box svg{width:16px;height:16px;flex:none;margin-top:1px}
+.success-icon{width:72px;height:72px;border-radius:999px;background:var(--md-success-container);color:var(--md-on-success-container);display:flex;align-items:center;justify-content:center;margin:var(--sp-5) auto var(--sp-4)}
+.success-icon svg{width:34px;height:34px}
+</style>
+</head>
+<body>
+<a class="back" href="./00-index.html">&larr; all mockups</a>
+<h1>4. Paywall / Upgrade</h1>
+<p class="sub">Deliberately short. The actual pitch already happened contextually on the item-detail ladder track (see screen 3) — this screen just completes a decision, so it doesn't need to re-sell from scratch, and doesn't read as an ad interstitial.</p>
+
+<div class="tabs">
+<input type="radio" name="st" id="s1" checked>
+<input type="radio" name="st" id="s2">
+<input type="radio" name="st" id="s3">
+<input type="radio" name="st" id="s4">
+<div class="tabbar">
+  <label for="s1">Default</label>
+  <label for="s2">Loading (billing check)</label>
+  <label for="s3">Error (purchase failed)</label>
+  <label for="s4">Success (purchased)</label>
+</div>
+<div class="stage">
+
+<!-- DEFAULT -->
+<div class="panel p1">
+<div class="device">
+  <div class="statusbar"><span>9:41</span><span>●●● 5G 100%</span></div>
+  <div class="appbar"><div class="icon-btn"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></div></div>
+  <div class="content">
+    <div class="hero-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M6 10a6 6 0 1 1 12 0c0 4 1.5 5.5 1.5 5.5H4.5S6 14 6 10z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M10 18.5a2 2 0 0 0 4 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></div>
+    <h3>Unlock the full ladder</h3>
+    <p class="lede">One payment. Every item, every type, forever.</p>
+    <div class="compare">
+      <div class="crow have"><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4 10-10" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><div><b>Unlimited items, all 6 types</b><span>Already yours — free, no change</span></div></div>
+      <div class="crow locked"><svg viewBox="0 0 24 24" fill="none"><rect x="5" y="10.5" width="14" height="9" rx="2.5" stroke="currentColor" stroke-width="1.8"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" stroke="currentColor" stroke-width="1.8"/></svg><div><b>Full multi-stage ladder</b><span>Type-aware, up to 4 reminders instead of 1</span></div></div>
+      <div class="crow locked"><svg viewBox="0 0 24 24" fill="none"><rect x="5" y="10.5" width="14" height="9" rx="2.5" stroke="currentColor" stroke-width="1.8"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" stroke="currentColor" stroke-width="1.8"/></svg><div><b>Overdue follow-through</b><span>We check in if a renewal passes unmarked</span></div></div>
+    </div>
+    <div class="price">$3.99 <small>one-time</small></div>
+    <p class="note">Not a subscription — pay once, keep it. Restorable if you change devices.</p>
+  </div>
+  <div style="padding:0 var(--sp-4) 26px">
+    <div class="btn btn-filled">Unlock for $3.99</div>
+    <div class="btn btn-text">Restore purchase</div>
+  </div>
+</div>
+</div>
+
+<!-- LOADING -->
+<div class="panel p2">
+<div class="device">
+  <div class="statusbar"><span>9:41</span><span>●●● 5G 100%</span></div>
+  <div class="appbar"><div class="icon-btn"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></div></div>
+  <div class="content">
+    <div class="skel" style="height:64px;width:64px;border-radius:28px;margin:16px auto"></div>
+    <div class="skel" style="height:24px;width:60%;margin:0 auto 10px"></div>
+    <div class="skel" style="height:150px"></div>
+  </div>
+  <div style="padding:0 var(--sp-4) 26px">
+    <div class="btn btn-filled" style="background:var(--md-surface-container-high);color:var(--md-outline)"><span class="saving-spinner"></span>Checking billing…</div>
+  </div>
+</div>
+</div>
+
+<!-- ERROR -->
+<div class="panel p3">
+<div class="device">
+  <div class="statusbar"><span>9:41</span><span>●●● 5G 100%</span></div>
+  <div class="appbar"><div class="icon-btn"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></div></div>
+  <div class="content">
+    <div class="hero-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M6 10a6 6 0 1 1 12 0c0 4 1.5 5.5 1.5 5.5H4.5S6 14 6 10z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M10 18.5a2 2 0 0 0 4 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></div>
+    <h3>Unlock the full ladder</h3>
+    <p class="lede">One payment. Every item, every type, forever.</p>
+    <div class="error-box"><svg viewBox="0 0 24 24" fill="none"><path d="M12 7v6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><circle cx="12" cy="17" r="1.3" fill="currentColor"/></svg><div>Purchase didn't go through — you haven't been charged. Check your connection and try again, or use Restore purchase if you've bought this before on another device.</div></div>
+    <div class="price">$3.99 <small>one-time</small></div>
+  </div>
+  <div style="padding:0 var(--sp-4) 26px">
+    <div class="btn btn-filled">Try again</div>
+    <div class="btn btn-text">Restore purchase</div>
+  </div>
+</div>
+</div>
+
+<!-- SUCCESS -->
+<div class="panel p4">
+<div class="device">
+  <div class="statusbar"><span>9:41</span><span>●●● 5G 100%</span></div>
+  <div class="appbar"><div class="icon-btn"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></div></div>
+  <div class="content">
+    <div class="success-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4 10-10" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <h3>You're set</h3>
+    <p class="lede">Full ladder unlocked for every item — the extra stages on your existing renewals are scheduling now.</p>
+  </div>
+  <div style="padding:0 var(--sp-4) 26px">
+    <div class="btn btn-filled">Back to your renewals</div>
+  </div>
+</div>
+</div>
+
+</div>
+</div>
+</body>
+</html>

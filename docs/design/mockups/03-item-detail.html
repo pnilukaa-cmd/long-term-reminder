@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>renewal-reminder — Item detail</title>
+<style>
+:root{
+  --md-primary:#4256E5; --md-on-primary:#FFFFFF; --md-primary-container:#DEE1FF; --md-on-primary-container:#00135A;
+  --md-secondary:#5C5D72; --md-secondary-container:#E1E0F9; --md-on-secondary-container:#191A2C;
+  --md-surface:#FBF8FF; --md-surface-dim:#DBD9E3; --md-surface-container-lowest:#FFFFFF; --md-surface-container-low:#F5F2FA;
+  --md-surface-container:#EFEDF6; --md-surface-container-high:#E9E7F1; --md-surface-container-highest:#E3E1EC;
+  --md-on-surface:#1B1B23; --md-on-surface-variant:#46464F; --md-outline:#777680; --md-outline-variant:#C7C5D0;
+  --md-error:#BA1A1A; --md-error-container:#FFDAD6; --md-on-error:#FFFFFF; --md-on-error-container:#410002;
+  --md-warning:#8A5300; --md-warning-container:#FFDEA6; --md-on-warning-container:#2A1800;
+  --md-success:#146C2E; --md-success-container:#B6F2C4; --md-on-success-container:#002109;
+  --cat-passport-c:#D3E4FF; --cat-passport-on:#001C3B;
+  --cat-insurance-c:#B8EAE3; --cat-insurance-on:#00201C;
+  --cat-licence-c:#EDDCFF; --cat-licence-on:#26005E;
+  --cat-vehicle-c:#F0D9C8; --cat-vehicle-on:#2B1500;
+  --cat-warranty-c:#DDE3F5; --cat-warranty-on:#131C2E;
+  --cat-custom-c:#E5E1EC; --cat-custom-on:#201B29;
+  --shape-xs:8px; --shape-sm:12px; --shape-md:16px; --shape-lg:20px; --shape-xl:28px; --shape-full:999px;
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:24px; --sp-6:32px; --sp-7:48px;
+  --font:'Google Sans','Roboto',system-ui,-apple-system,'Segoe UI',sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--font);background:#eef0f6;color:var(--md-on-surface);padding:var(--sp-6)}
+h1{font-size:24px;margin:0 0 4px}
+p.sub{color:var(--md-on-surface-variant);margin:0 0 var(--sp-5);max-width:780px;line-height:1.5}
+a.back{color:var(--md-primary);font-size:13px;text-decoration:none}
+.tabs input{display:none}
+.tabbar{display:flex;gap:var(--sp-2);margin-bottom:var(--sp-5);flex-wrap:wrap}
+.tabbar label{cursor:pointer;padding:8px 16px;border-radius:var(--shape-full);background:var(--md-surface-container-lowest);border:1px solid var(--md-outline-variant);font-size:13px;font-weight:600;color:var(--md-on-surface-variant)}
+.panel{display:none}
+#s1:checked ~ .stage .p1{display:block}
+#s2:checked ~ .stage .p2{display:block}
+#s3:checked ~ .stage .p3{display:block}
+#s4:checked ~ .stage .p4{display:block}
+#s1:checked ~ .tabbar label[for=s1],
+#s2:checked ~ .tabbar label[for=s2],
+#s3:checked ~ .tabbar label[for=s3],
+#s4:checked ~ .tabbar label[for=s4]{background:var(--md-primary);color:var(--md-on-primary);border-color:var(--md-primary)}
+.device{width:390px;height:790px;background:var(--md-surface);border-radius:36px;box-shadow:0 12px 40px rgba(20,20,40,.18);overflow:hidden;display:flex;flex-direction:column;border:8px solid #1c1c1e;position:relative}
+.statusbar{height:28px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;font-size:12px;font-weight:600;flex:none}
+.appbar{padding:var(--sp-2) var(--sp-4) var(--sp-2);display:flex;align-items:center;gap:var(--sp-3);flex:none}
+.appbar h2{font-size:15px;margin:0;font-weight:700;flex:1;color:var(--md-on-surface-variant)}
+.icon-btn{width:40px;height:40px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:var(--md-surface-container-high);color:var(--md-on-surface-variant);flex:none}
+.icon-btn svg{width:19px;height:19px}
+.content{flex:1;overflow-y:auto;padding:0 var(--sp-4) var(--sp-7)}
+
+.hero{display:flex;align-items:center;gap:var(--sp-3);margin:var(--sp-2) 0 var(--sp-4)}
+.hero .type-badge{width:52px;height:52px;border-radius:var(--shape-lg);display:flex;align-items:center;justify-content:center;flex:none}
+.hero .type-badge svg{width:26px;height:26px}
+.hero h3{font-size:20px;margin:0 0 4px;font-weight:700}
+.hero .due-line{font-size:13px;color:var(--md-on-surface-variant)}
+.status-pill{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:var(--shape-full);margin-top:6px}
+.status-pill svg{width:12px;height:12px}
+.status-pill.upcoming{background:var(--md-surface-container-high);color:var(--md-on-surface-variant)}
+.status-pill.duesoon{background:var(--md-warning-container);color:var(--md-on-warning-container)}
+
+.card{background:var(--md-surface-container-lowest);border:1px solid var(--md-outline-variant);border-radius:var(--shape-lg);padding:var(--sp-4);margin-bottom:var(--sp-4)}
+.card h4{font-size:13px;margin:0 0 2px;font-weight:700}
+.card .desc{font-size:12px;color:var(--md-on-surface-variant);line-height:1.5;margin:0 0 8px}
+
+.track{display:flex;align-items:flex-start;justify-content:space-between;position:relative;padding:0 2px;margin:16px 0 6px}
+.track::before{content:'';position:absolute;top:14px;left:14px;right:14px;height:2px;background:var(--md-outline-variant);z-index:0}
+.t-item{display:flex;flex-direction:column;align-items:center;gap:5px;flex:1;position:relative;z-index:1}
+.t-dot{width:28px;height:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:var(--md-surface-container-lowest);border:2px solid var(--md-outline-variant);color:var(--md-outline);flex:none}
+.t-dot svg{width:13px;height:13px}
+.t-dot.fired{background:var(--md-primary);border-color:var(--md-primary);color:#fff}
+.t-dot.next{background:var(--md-primary-container);border-color:var(--md-primary);color:var(--md-on-primary-container)}
+.t-dot.locked{background:var(--md-surface-container-high);border-color:var(--md-outline-variant);color:var(--md-outline);border-style:dashed}
+.t-dot.today{background:var(--md-on-surface);border-color:var(--md-on-surface);width:14px;height:14px;margin-top:7px}
+.t-dot.due{background:var(--md-error-container);border-color:var(--md-error);color:var(--md-on-error-container)}
+.t-label{font-size:9.5px;font-weight:700;text-align:center;color:var(--md-on-surface)}
+.t-date{font-size:8.5px;color:var(--md-on-surface-variant);text-align:center}
+.t-item.today .t-label{color:var(--md-on-surface-variant);font-weight:600}
+
+.unlock-banner{background:var(--md-primary-container);border-radius:var(--shape-md);padding:var(--sp-3) var(--sp-4);margin-top:var(--sp-3);display:flex;align-items:center;gap:10px}
+.unlock-banner .txt{flex:1;font-size:11.5px;color:var(--md-on-primary-container);line-height:1.4}
+.unlock-banner .txt b{display:block;font-size:12.5px;margin-bottom:2px}
+.unlock-btn{background:var(--md-primary);color:var(--md-on-primary);font-size:11.5px;font-weight:700;padding:8px 12px;border-radius:var(--shape-full);white-space:nowrap;flex:none}
+.active-note{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--md-success);font-weight:700;margin-top:var(--sp-3)}
+.active-note svg{width:14px;height:14px}
+
+.notes-body{font-size:13px;line-height:1.5;color:var(--md-on-surface)}
+
+.bottom-bar{position:absolute;left:0;right:0;bottom:0;padding:14px var(--sp-4) 26px;background:linear-gradient(0deg,var(--md-surface) 65%,rgba(251,248,255,0));display:flex;gap:10px}
+.btn{padding:13px 18px;border-radius:var(--shape-full);font-size:14px;font-weight:700;border:none;flex:1;text-align:center;display:flex;align-items:center;justify-content:center;gap:6px}
+.btn svg{width:16px;height:16px}
+.btn-filled{background:var(--md-primary);color:var(--md-on-primary)}
+.btn-outlined{background:var(--md-surface-container-lowest);border:1px solid var(--md-outline);color:var(--md-on-surface)}
+
+.skel{border-radius:var(--shape-lg);background:linear-gradient(90deg,var(--md-surface-container-high) 25%,var(--md-surface-container) 37%,var(--md-surface-container-high) 63%);background-size:400px 100%;animation:shimmer 1.4s infinite linear;margin-bottom:var(--sp-3)}
+@keyframes shimmer{0%{background-position:-200px 0}100%{background-position:200px 0}}
+
+.error-wrap{display:flex;flex-direction:column;align-items:center;text-align:center;padding:var(--sp-7) var(--sp-5)}
+.error-icon{width:56px;height:56px;border-radius:999px;background:var(--md-error-container);color:var(--md-on-error-container);display:flex;align-items:center;justify-content:center;margin-bottom:var(--sp-4)}
+.error-icon svg{width:26px;height:26px}
+.error-wrap h3{font-size:17px;margin:0 0 6px}
+.error-wrap p{font-size:13.5px;color:var(--md-on-surface-variant);line-height:1.5;margin:0 0 var(--sp-5)}
+</style>
+</head>
+<body>
+<a class="back" href="./00-index.html">&larr; all mockups</a>
+<h1>3. Item detail</h1>
+<p class="sub">The ladder track is the core differentiator, surfaced at the moment it matters most. Free-tier variant shows the exact same track with the extra stages rendered as locked markers in position, so the paid difference is legible without a separate ad screen (routed q.3 and q.5).</p>
+
+<div class="tabs">
+<input type="radio" name="st" id="s1">
+<input type="radio" name="st" id="s2">
+<input type="radio" name="st" id="s3" checked>
+<input type="radio" name="st" id="s4">
+<div class="tabbar">
+  <label for="s1">Loading</label>
+  <label for="s2">Error (not found)</label>
+  <label for="s3">Success — Free tier item</label>
+  <label for="s4">Success — Paid tier item</label>
+</div>
+<div class="stage">
+
+<!-- LOADING -->
+<div class="panel p1">
+<div class="device">
+  <div class="statusbar"><span>9:41</span><span>●●● 5G 100%</span></div>
+  <div class="appbar"><div class="icon-btn"><svg viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><h2>&nbsp;</h2><div class="icon-btn"><svg viewBox="0 0 24 24" fill="none"><circle cx="5" cy="12" r="1.4" fill="currentColor"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/><circle cx="19" cy="12" r="1.4" fill="currentColor"/></svg></div></div>
+  <div class="content">
+    <div class="skel" style="height:52px;width:80%;margin-top:12px"></div>
+    <div class="skel" style="height:130px"></div>
+    <div class="skel" style="height:90px"></div>
+  </div>
+</div>
+</div>
+
+<!-- ERROR -->
+<div class="panel p2">
+<div class="device">
+  <div class="statusbar"><span>9:41</span><span>●●● 5G 100%</span></div>
+  <div class="appbar"><div class="icon-btn"><svg viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><h2>&nbsp;</h2></div>
+  <div class="content">
+    <div class="error-wrap">
+      <div class="error-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 7v6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><circle cx="12" cy="17" r="1.3" fill="currentColor"/></svg></div>
+      <h3>This item isn't here anymore</h3>
+      <p>It may have been deleted. Nothing to worry about on our end — your other renewals are untouched.</p>
+      <div class="btn btn-outlined" style="flex:none;padding:11px 22px">Back to your renewals</div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- SUCCESS FREE TIER -->
+<div class="panel p3">
+<div class="device">
+  <div class="statusbar"><span>9:41</span><span>●●● 5G 100%</span></div>
+  <div class="appbar"><div class="icon-btn"><svg viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><h2>PASSPORT / TRAVEL ID</h2><div class="icon-btn"><svg viewBox="0 0 24 24" fill="none"><circle cx="5" cy="12" r="1.4" fill="currentColor"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/><circle cx="19" cy="12" r="1.4" fill="currentColor"/></svg></div></div>
+  <div class="content">
+    <div class="hero">
+      <div class="type-badge" style="background:var(--cat-passport-c);color:var(--cat-passport-on)"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="3" width="16" height="18" rx="2" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="10" r="3" stroke="currentColor" stroke-width="1.4"/><path d="M8 17h8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></div>
+      <div>
+        <h3>Passport</h3>
+        <div class="due-line">Due 12 Dec 2026 · in 4 months</div>
+        <div class="status-pill upcoming"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.8"/><path d="M12 7.5V12l3 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Upcoming</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h4>Your reminder (free plan)</h4>
+      <p class="desc">Free plan gives every item one well-timed reminder — no escalation, no overdue follow-up. Here's where it sits against the full ladder:</p>
+      <div class="track">
+        <div class="t-item"><div class="t-dot locked"><svg viewBox="0 0 24 24" fill="none"><rect x="5" y="10.5" width="14" height="9" rx="2.5" stroke="currentColor" stroke-width="1.8"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" stroke="currentColor" stroke-width="1.8"/></svg></div><div class="t-label">6mo</div><div class="t-date">Jun 12</div></div>
+        <div class="t-item today"><div class="t-dot today"></div><div class="t-label">Today</div><div class="t-date">Aug 20</div></div>
+        <div class="t-item"><div class="t-dot next"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.8"/><path d="M12 7.5V12l3 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div><div class="t-label">3mo</div><div class="t-date">Sep 12</div></div>
+        <div class="t-item"><div class="t-dot locked"><svg viewBox="0 0 24 24" fill="none"><rect x="5" y="10.5" width="14" height="9" rx="2.5" stroke="currentColor" stroke-width="1.8"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" stroke="currentColor" stroke-width="1.8"/></svg></div><div class="t-label">1mo</div><div class="t-date">Nov 12</div></div>
+        <div class="t-item"><div class="t-dot locked"><svg viewBox="0 0 24 24" fill="none"><rect x="5" y="10.5" width="14" height="9" rx="2.5" stroke="currentColor" stroke-width="1.8"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" stroke="currentColor" stroke-width="1.8"/></svg></div><div class="t-label">1wk</div><div class="t-date">Dec 5</div></div>
+        <div class="t-item"><div class="t-dot due"><svg viewBox="0 0 24 24" fill="none"><path d="M6 3v18M6 4h11l-2.5 3L17 10H6" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></div><div class="t-label">Due</div><div class="t-date">Dec 12</div></div>
+      </div>
+      <div class="unlock-banner">
+        <div class="txt"><b>2 more warnings live here, unclaimed</b>The 6-month and 1-month stages are what make a passport ladder actually work — that's the processing-backlog window.</div>
+        <div class="unlock-btn">Unlock — $3.99</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h4>Notes</h4>
+      <div class="notes-body">No notes added.</div>
+    </div>
+  </div>
+  <div class="bottom-bar">
+    <div class="btn btn-outlined"><svg viewBox="0 0 24 24" fill="none"><path d="M4 20l1.2-4.2L15.8 5.2a1.7 1.7 0 0 1 2.4 0l.6.6a1.7 1.7 0 0 1 0 2.4L8.2 18.8 4 20z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>Edit</div>
+    <div class="btn btn-filled"><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4 10-10" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Mark as done</div>
+  </div>
+</div>
+</div>
+
+<!-- SUCCESS PAID TIER -->
+<div class="panel p4">
+<div class="device">
+  <div class="statusbar"><span>9:41</span><span>●●● 5G 100%</span></div>
+  <div class="appbar"><div class="icon-btn"><svg viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><h2>PASSPORT / TRAVEL ID</h2><div class="icon-btn"><svg viewBox="0 0 24 24" fill="none"><circle cx="5" cy="12" r="1.4" fill="currentColor"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/><circle cx="19" cy="12" r="1.4" fill="currentColor"/></svg></div></div>
+  <div class="content">
+    <div class="hero">
+      <div class="type-badge" style="background:var(--cat-passport-c);color:var(--cat-passport-on)"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="3" width="16" height="18" rx="2" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="10" r="3" stroke="currentColor" stroke-width="1.4"/><path d="M8 17h8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></div>
+      <div>
+        <h3>Passport</h3>
+        <div class="due-line">Due 12 Dec 2026 · in 4 months</div>
+        <div class="status-pill upcoming"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.8"/><path d="M12 7.5V12l3 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Upcoming</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h4>Your reminder ladder</h4>
+      <p class="desc">Full 4-stage ladder — starts early enough that processing time isn't a surprise.</p>
+      <div class="track">
+        <div class="t-item"><div class="t-dot fired"><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4 10-10" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="t-label">6mo</div><div class="t-date">Jun 12</div></div>
+        <div class="t-item today"><div class="t-dot today"></div><div class="t-label">Today</div><div class="t-date">Aug 20</div></div>
+        <div class="t-item"><div class="t-dot next"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.8"/><path d="M12 7.5V12l3 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div><div class="t-label">3mo</div><div class="t-date">Sep 12</div></div>
+        <div class="t-item"><div class="t-dot"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.8"/><path d="M12 7.5V12l3 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div><div class="t-label">1mo</div><div class="t-date">Nov 12</div></div>
+        <div class="t-item"><div class="t-dot"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.8"/><path d="M12 7.5V12l3 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div><div class="t-label">1wk</div><div class="t-date">Dec 5</div></div>
+        <div class="t-item"><div class="t-dot due"><svg viewBox="0 0 24 24" fill="none"><path d="M6 3v18M6 4h11l-2.5 3L17 10H6" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></div><div class="t-label">Due</div><div class="t-date">Dec 12</div></div>
+      </div>
+      <div class="active-note"><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4 10-10" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Full ladder active — plus overdue follow-through if this passes unmarked</div>
+    </div>
+
+    <div class="card">
+      <h4>Notes</h4>
+      <div class="notes-body">Renew online — last one took 6 weeks during the summer backlog.</div>
+    </div>
+  </div>
+  <div class="bottom-bar">
+    <div class="btn btn-outlined"><svg viewBox="0 0 24 24" fill="none"><path d="M4 20l1.2-4.2L15.8 5.2a1.7 1.7 0 0 1 2.4 0l.6.6a1.7 1.7 0 0 1 0 2.4L8.2 18.8 4 20z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>Edit</div>
+    <div class="btn btn-filled"><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4 10-10" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Mark as done</div>
+  </div>
+</div>
+</div>
+
+</div>
+</div>
+</body>
+</html>

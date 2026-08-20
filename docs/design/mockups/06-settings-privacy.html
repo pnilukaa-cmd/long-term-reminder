@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>renewal-reminder — Settings / Privacy</title>
+<style>
+:root{
+  --md-primary:#4256E5; --md-on-primary:#FFFFFF; --md-primary-container:#DEE1FF; --md-on-primary-container:#00135A;
+  --md-secondary:#5C5D72; --md-secondary-container:#E1E0F9; --md-on-secondary-container:#191A2C;
+  --md-surface:#FBF8FF; --md-surface-dim:#DBD9E3; --md-surface-container-lowest:#FFFFFF; --md-surface-container-low:#F5F2FA;
+  --md-surface-container:#EFEDF6; --md-surface-container-high:#E9E7F1; --md-surface-container-highest:#E3E1EC;
+  --md-on-surface:#1B1B23; --md-on-surface-variant:#46464F; --md-outline:#777680; --md-outline-variant:#C7C5D0;
+  --md-error:#BA1A1A; --md-error-container:#FFDAD6; --md-on-error:#FFFFFF; --md-on-error-container:#410002;
+  --md-warning:#8A5300; --md-warning-container:#FFDEA6; --md-on-warning-container:#2A1800;
+  --md-success:#146C2E; --md-success-container:#B6F2C4; --md-on-success-container:#002109;
+  --shape-xs:8px; --shape-sm:12px; --shape-md:16px; --shape-lg:20px; --shape-xl:28px; --shape-full:999px;
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:24px; --sp-6:32px; --sp-7:48px;
+  --font:'Google Sans','Roboto',system-ui,-apple-system,'Segoe UI',sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--font);background:#eef0f6;color:var(--md-on-surface);padding:var(--sp-6)}
+h1{font-size:24px;margin:0 0 4px}
+p.sub{color:var(--md-on-surface-variant);margin:0 0 var(--sp-5);max-width:780px;line-height:1.5}
+a.back{color:var(--md-primary);font-size:13px;text-decoration:none}
+.tabs input{display:none}
+.tabbar{display:flex;gap:var(--sp-2);margin-bottom:var(--sp-5);flex-wrap:wrap}
+.tabbar label{cursor:pointer;padding:8px 16px;border-radius:var(--shape-full);background:var(--md-surface-container-lowest);border:1px solid var(--md-outline-variant);font-size:13px;font-weight:600;color:var(--md-on-surface-variant)}
+.panel{display:none}
+#s1:checked ~ .stage .p1{display:block}
+#s2:checked ~ .stage .p2{display:block}
+#s3:checked ~ .stage .p3{display:block}
+#s1:checked ~ .tabbar label[for=s1], #s2:checked ~ .tabbar label[for=s2], #s3:checked ~ .tabbar label[for=s3]
+{background:var(--md-primary);color:var(--md-on-primary);border-color:var(--md-primary)}
+.device{width:390px;height:790px;background:var(--md-surface);border-radius:36px;box-shadow:0 12px 40px rgba(20,20,40,.18);overflow:hidden;display:flex;flex-direction:column;border:8px solid #1c1c1e;position:relative}
+.statusbar{height:28px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;font-size:12px;font-weight:600;flex:none}
+.appbar{padding:var(--sp-2) var(--sp-4) var(--sp-3);display:flex;align-items:center;gap:var(--sp-3);flex:none}
+.appbar h2{font-size:19px;margin:0;font-weight:700}
+.icon-btn{width:40px;height:40px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:var(--md-surface-container-high);color:var(--md-on-surface-variant);flex:none}
+.icon-btn svg{width:19px;height:19px}
+.content{flex:1;overflow-y:auto;padding:0 var(--sp-4) var(--sp-6)}
+.group-label{font-size:11.5px;font-weight:700;color:var(--md-on-surface-variant);text-transform:uppercase;letter-spacing:.4px;margin:var(--sp-5) 0 8px}
+.list{background:var(--md-surface-container-lowest);border-radius:var(--shape-lg);overflow:hidden;border:1px solid var(--md-outline-variant)}
+.item{display:flex;align-items:center;gap:12px;padding:14px 14px;border-bottom:1px solid var(--md-outline-variant)}
+.item:last-child{border-bottom:none}
+.item .ic{width:34px;height:34px;border-radius:999px;background:var(--md-surface-container-high);color:var(--md-on-surface-variant);display:flex;align-items:center;justify-content:center;flex:none}
+.item .ic svg{width:17px;height:17px}
+.item .txt{flex:1}
+.item .txt b{display:block;font-size:13.5px;font-weight:600}
+.item .txt span{font-size:11.5px;color:var(--md-on-surface-variant)}
+.item .chev{color:var(--md-outline)}
+.privacy-card{background:var(--md-success-container);color:var(--md-on-success-container);border-radius:var(--shape-lg);padding:var(--sp-4);margin-top:var(--sp-5);display:flex;gap:12px}
+.privacy-card svg{width:22px;height:22px;flex:none;margin-top:2px}
+.privacy-card p{font-size:12.5px;line-height:1.5;margin:0}
+.privacy-card b{display:block;font-size:13.5px;margin-bottom:4px}
+.disclaimer{font-size:11px;color:var(--md-on-surface-variant);line-height:1.5;margin-top:var(--sp-5);padding:0 4px}
+.skel{border-radius:var(--shape-lg);background:linear-gradient(90deg,var(--md-surface-container-high) 25%,var(--md-surface-container) 37%,var(--md-surface-container-high) 63%);background-size:400px 100%;animation:shimmer 1.4s infinite linear;margin-bottom:var(--sp-3)}
+@keyframes shimmer{0%{background-position:-200px 0}100%{background-position:200px 0}}
+.error-wrap{display:flex;flex-direction:column;align-items:center;text-align:center;padding:var(--sp-7) var(--sp-5)}
+.error-icon{width:56px;height:56px;border-radius:999px;background:var(--md-error-container);color:var(--md-on-error-container);display:flex;align-items:center;justify-content:center;margin-bottom:var(--sp-4)}
+.error-icon svg{width:26px;height:26px}
+.error-wrap h3{font-size:17px;margin:0 0 6px}
+.error-wrap p{font-size:13.5px;color:var(--md-on-surface-variant);line-height:1.5;margin:0 0 var(--sp-5)}
+.btn{padding:11px 22px;border-radius:var(--shape-full);font-size:14px;font-weight:700;border:none}
+.btn-filled{background:var(--md-primary);color:var(--md-on-primary)}
+</style>
+</head>
+<body>
+<a class="back" href="./00-index.html">&larr; all mockups</a>
+<h1>6. Settings / Privacy</h1>
+<p class="sub">Mostly static content. The privacy disclosure and the cautious "not an official source" disclaimer both live here — flagged in the scope doc as required before ship, not a blocker to design/build now.</p>
+
+<div class="tabs">
+<input type="radio" name="st" id="s1">
+<input type="radio" name="st" id="s2">
+<input type="radio" name="st" id="s3" checked>
+<div class="tabbar">
+  <label for="s1">Loading</label>
+  <label for="s2">Error</label>
+  <label for="s3">Success</label>
+</div>
+<div class="stage">
+
+<div class="panel p1"><div class="device">
+  <div class="statusbar"><span>9:41</span><span>●●● 5G 100%</span></div>
+  <div class="appbar"><div class="icon-btn"><svg viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><h2>Settings</h2></div>
+  <div class="content">
+    <div class="skel" style="height:120px;margin-top:16px"></div>
+    <div class="skel" style="height:80px"></div>
+  </div>
+</div></div>
+
+<div class="panel p2"><div class="device">
+  <div class="statusbar"><span>9:41</span><span>●●● 5G 100%</span></div>
+  <div class="appbar"><div class="icon-btn"><svg viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><h2>Settings</h2></div>
+  <div class="content">
+    <div class="error-wrap">
+      <div class="error-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 7v6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><circle cx="12" cy="17" r="1.3" fill="currentColor"/></svg></div>
+      <h3>Couldn't load settings</h3>
+      <p>Nothing lost — this screen doesn't hold your renewal data.</p>
+      <div class="btn btn-filled">Try again</div>
+    </div>
+  </div>
+</div></div>
+
+<div class="panel p3"><div class="device">
+  <div class="statusbar"><span>9:41</span><span>●●● 5G 100%</span></div>
+  <div class="appbar"><div class="icon-btn"><svg viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><h2>Settings</h2></div>
+  <div class="content">
+    <div class="group-label">Reminders</div>
+    <div class="list">
+      <div class="item"><div class="ic"><svg viewBox="0 0 24 24" fill="none"><path d="M6 10a6 6 0 1 1 12 0c0 4 1.5 5.5 1.5 5.5H4.5S6 14 6 10z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M10 18.5a2 2 0 0 0 4 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></div><div class="txt"><b>Notifications</b><span>On — manage in system settings</span></div><div class="chev">›</div></div>
+      <div class="item"><div class="ic"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.8"/><path d="M12 7.5V12l3 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div><div class="txt"><b>Exact reminder timing</b><span>Off — reminders still arrive same-day</span></div><div class="chev">›</div></div>
+    </div>
+
+    <div class="group-label">Purchase</div>
+    <div class="list">
+      <div class="item"><div class="ic"><svg viewBox="0 0 24 24" fill="none"><rect x="5" y="10.5" width="14" height="9" rx="2.5" stroke="currentColor" stroke-width="1.8"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" stroke="currentColor" stroke-width="1.8"/></svg></div><div class="txt"><b>Full ladder</b><span>Not unlocked yet</span></div><div class="chev">›</div></div>
+      <div class="item"><div class="ic"><svg viewBox="0 0 24 24" fill="none"><path d="M4 20l1.2-4.2L15.8 5.2a1.7 1.7 0 0 1 2.4 0l.6.6a1.7 1.7 0 0 1 0 2.4L8.2 18.8 4 20z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></div><div class="txt"><b>Restore purchase</b><span>Bought on another device?</span></div><div class="chev">›</div></div>
+    </div>
+
+    <div class="privacy-card">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <p><b>Everything stays on this device</b>No account, no cloud, no sync. Your renewal dates and notes never leave your phone.</p>
+    </div>
+
+    <div class="group-label">About</div>
+    <div class="list">
+      <div class="item"><div class="ic"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M12 8v.01M12 11v5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div><div class="txt"><b>Version</b><span>1.0.0</span></div></div>
+    </div>
+
+    <p class="disclaimer">renewal-reminder is not an official or authoritative source for renewal deadlines, government processing times, or compliance requirements. Always confirm exact dates and requirements with the relevant issuing authority (DVLA, passport office, licensing board, insurer, etc.) — this app is a personal reminder tool, not a substitute for official guidance.</p>
+  </div>
+</div></div>
+
+</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>renewal-reminder — v1 mockups &amp; design system</title>
+<style>
+:root{
+  --md-primary:#4256E5; --md-on-primary:#FFFFFF; --md-primary-container:#DEE1FF; --md-on-primary-container:#00135A;
+  --md-secondary:#5C5D72; --md-secondary-container:#E1E0F9; --md-on-secondary-container:#191A2C;
+  --md-surface:#FBF8FF; --md-surface-dim:#DBD9E3; --md-surface-container-lowest:#FFFFFF; --md-surface-container-low:#F5F2FA;
+  --md-surface-container:#EFEDF6; --md-surface-container-high:#E9E7F1; --md-surface-container-highest:#E3E1EC;
+  --md-on-surface:#1B1B23; --md-on-surface-variant:#46464F; --md-outline:#777680; --md-outline-variant:#C7C5D0;
+  --md-error:#BA1A1A; --md-error-container:#FFDAD6; --md-on-error:#FFFFFF; --md-on-error-container:#410002;
+  --md-warning:#8A5300; --md-warning-container:#FFDEA6; --md-on-warning-container:#2A1800;
+  --md-success:#146C2E; --md-success-container:#B6F2C4; --md-on-success-container:#002109;
+  --cat-passport-c:#D3E4FF; --cat-passport-on:#001C3B;
+  --cat-insurance-c:#B8EAE3; --cat-insurance-on:#00201C;
+  --cat-licence-c:#EDDCFF; --cat-licence-on:#26005E;
+  --cat-vehicle-c:#F0D9C8; --cat-vehicle-on:#2B1500;
+  --cat-warranty-c:#DDE3F5; --cat-warranty-on:#131C2E;
+  --cat-custom-c:#E5E1EC; --cat-custom-on:#201B29;
+  --shape-xs:8px; --shape-sm:12px; --shape-md:16px; --shape-lg:20px; --shape-xl:28px; --shape-full:999px;
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:24px; --sp-6:32px; --sp-7:48px;
+  --font:'Google Sans','Roboto',system-ui,-apple-system,'Segoe UI',sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--font);background:#eef0f6;color:var(--md-on-surface);padding:var(--sp-6)}
+h1{font-size:28px;margin:0 0 4px}
+.sub{color:var(--md-on-surface-variant);margin:0 0 var(--sp-6);max-width:760px;line-height:1.5}
+h2{font-size:18px;margin:var(--sp-7) 0 var(--sp-3);border-bottom:1px solid var(--md-outline-variant);padding-bottom:var(--sp-2)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:var(--sp-4);max-width:1100px}
+.screen-card{background:var(--md-surface-container-lowest);border-radius:var(--shape-lg);padding:var(--sp-5);box-shadow:0 1px 3px rgba(0,0,0,.08);text-decoration:none;color:inherit;display:block;border:1px solid var(--md-outline-variant)}
+.screen-card:hover{border-color:var(--md-primary)}
+.screen-card b{display:block;font-size:15px;margin-bottom:4px}
+.screen-card span{font-size:13px;color:var(--md-on-surface-variant);line-height:1.4}
+.swatches{display:flex;flex-wrap:wrap;gap:var(--sp-3);max-width:1100px}
+.swatch{width:160px;border-radius:var(--shape-md);overflow:hidden;border:1px solid var(--md-outline-variant)}
+.swatch .fill{height:56px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600}
+.swatch .label{padding:6px 10px;font-size:11px;background:#fff;color:var(--md-on-surface-variant)}
+.legend-row{display:flex;align-items:center;gap:var(--sp-3);margin-bottom:var(--sp-2);font-size:14px}
+.dot{width:22px;height:22px;border-radius:999px;display:flex;align-items:center;justify-content:center;flex:none}
+.dot svg{width:13px;height:13px}
+.type-badge{width:34px;height:34px;border-radius:var(--shape-md);display:flex;align-items:center;justify-content:center;flex:none}
+.type-badge svg{width:18px;height:18px}
+.type-row{display:flex;align-items:center;gap:var(--sp-3);margin-bottom:var(--sp-3);font-size:14px}
+code{background:var(--md-surface-container-high);padding:1px 6px;border-radius:4px;font-size:12px}
+</style>
+</head>
+<body>
+<h1>renewal-reminder — v1 design</h1>
+<p class="sub">Self-contained mockups, one file per screen, each showing loading / empty / error / success (or the closest equivalent) via click-to-switch tabs — no build step, no JS framework, plain HTML/CSS. Token block below is proposed here for the first time (no prior theme existed for this app) and is inlined identically into every file.</p>
+
+<h2>Screens</h2>
+<div class="grid">
+  <a class="screen-card" href="./01-home-list.html"><b>1. Home / List</b><span>The hub. First-run empty state is the type-picker itself, not a dead end.</span></a>
+  <a class="screen-card" href="./02-add-edit-item.html"><b>2. Add / Edit item</b><span>Type presets, due date, notes. Validation + save states.</span></a>
+  <a class="screen-card" href="./03-item-detail.html"><b>3. Item detail</b><span>The ladder track — full paid ladder vs. locked free-tier preview.</span></a>
+  <a class="screen-card" href="./04-paywall.html"><b>4. Paywall / Upgrade</b><span>Short — the pitch already happened on item detail.</span></a>
+  <a class="screen-card" href="./05-permissions.html"><b>5. Permission prompts</b><span>Notification priming + conditional exact-alarm screen.</span></a>
+  <a class="screen-card" href="./06-settings-privacy.html"><b>6. Settings / Privacy</b><span>Local-only disclosure, restore purchase, notification settings link.</span></a>
+</div>
+
+<h2>Color roles</h2>
+<div class="swatches">
+  <div class="swatch"><div class="fill" style="background:var(--md-primary);color:var(--md-on-primary)">primary</div><div class="label">--md-primary</div></div>
+  <div class="swatch"><div class="fill" style="background:var(--md-primary-container);color:var(--md-on-primary-container)">primary-container</div><div class="label">--md-primary-container</div></div>
+  <div class="swatch"><div class="fill" style="background:var(--md-surface-container);color:var(--md-on-surface)">surface-container</div><div class="label">--md-surface-container</div></div>
+  <div class="swatch"><div class="fill" style="background:var(--md-error-container);color:var(--md-on-error-container)">error-container</div><div class="label">--md-error-container</div></div>
+  <div class="swatch"><div class="fill" style="background:var(--md-warning-container);color:var(--md-on-warning-container)">warning-container</div><div class="label">--md-warning-container (proposed, new)</div></div>
+  <div class="swatch"><div class="fill" style="background:var(--md-success-container);color:var(--md-on-success-container)">success-container</div><div class="label">--md-success-container (proposed, new)</div></div>
+</div>
+
+<h2>Status language (routed q.6) — shape + icon + colour + label, never colour alone</h2>
+<div class="legend-row"><div class="dot" style="border:2px solid var(--md-outline-variant);color:var(--md-on-surface-variant)"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.8"/><path d="M12 7.5V12l3 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div> Outlined ring, neutral tone — <b>Upcoming</b></div>
+<div class="legend-row"><div class="dot" style="background:var(--md-warning-container);color:var(--md-on-warning-container)"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.8"/><path d="M12 7.5V12l3 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div> Filled circle, warning tone — <b>Due soon</b></div>
+<div class="legend-row"><div class="dot" style="background:var(--md-error-container);color:var(--md-on-error-container);border-radius:999px 999px 999px 4px"><svg viewBox="0 0 24 24" fill="none"><path d="M12 7v6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><circle cx="12" cy="17" r="1.3" fill="currentColor"/></svg></div> Filled, one squared corner (distinct silhouette), error tone — <b>Overdue</b></div>
+<div class="legend-row"><div class="dot" style="background:var(--md-success-container);color:var(--md-on-success-container)"><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4 10-10" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div> Filled circle, success tone, reduced-opacity row — <b>Done</b></div>
+
+<h2>Type category tints (separate colour space from status, on purpose)</h2>
+<div class="type-row"><div class="type-badge" style="background:var(--cat-passport-c);color:var(--cat-passport-on)"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="3" width="16" height="18" rx="2" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="10" r="3" stroke="currentColor" stroke-width="1.4"/><path d="M8 17h8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></div>Passport / Travel ID — blue</div>
+<div class="type-row"><div class="type-badge" style="background:var(--cat-insurance-c);color:var(--cat-insurance-on)"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>Insurance — teal</div>
+<div class="type-row"><div class="type-badge" style="background:var(--cat-licence-c);color:var(--cat-licence-on)"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="5" stroke="currentColor" stroke-width="1.6"/><path d="M9 12.5L7.5 21l4.5-2.5L16.5 21 15 12.5" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></div>Professional Licence — violet</div>
+<div class="type-row"><div class="type-badge" style="background:var(--cat-vehicle-c);color:var(--cat-vehicle-on)"><svg viewBox="0 0 24 24" fill="none"><path d="M4 16v-3.5l2-4.5h12l2 4.5V16" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M4 16h16v2a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H7v1a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-2z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="8" cy="16" r="1.1" fill="currentColor"/><circle cx="16" cy="16" r="1.1" fill="currentColor"/></svg></div>Vehicle (generic) — terracotta, deliberately not amber (status colour)</div>
+<div class="type-row"><div class="type-badge" style="background:var(--cat-warranty-c);color:var(--cat-warranty-on)"><svg viewBox="0 0 24 24" fill="none"><path d="M4 8l8-4 8 4-8 4-8-4z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M4 8v8l8 4 8-4V8" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 12v8" stroke="currentColor" stroke-width="1.6"/></svg></div>Warranty — slate blue-grey</div>
+<div class="type-row"><div class="type-badge" style="background:var(--cat-custom-c);color:var(--cat-custom-on)"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3l2.4 5.8 6.1.5-4.7 4 1.5 6-5.3-3.5-5.3 3.5 1.5-6-4.7-4 6.1-.5L12 3z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></div>Custom / Other — neutral grey</div>
+
+<h2>Reference</h2>
+<p class="sub">Full rationale, ladder proposals with math, and open questions: <code>docs/design/02-v1-design.md</code></p>
+</body>
+</html>

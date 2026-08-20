@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>renewal-reminder — Permission prompts</title>
+<style>
+:root{
+  --md-primary:#4256E5; --md-on-primary:#FFFFFF; --md-primary-container:#DEE1FF; --md-on-primary-container:#00135A;
+  --md-secondary:#5C5D72; --md-secondary-container:#E1E0F9; --md-on-secondary-container:#191A2C;
+  --md-surface:#FBF8FF; --md-surface-dim:#DBD9E3; --md-surface-container-lowest:#FFFFFF; --md-surface-container-low:#F5F2FA;
+  --md-surface-container:#EFEDF6; --md-surface-container-high:#E9E7F1; --md-surface-container-highest:#E3E1EC;
+  --md-on-surface:#1B1B23; --md-on-surface-variant:#46464F; --md-outline:#777680; --md-outline-variant:#C7C5D0;
+  --md-error:#BA1A1A; --md-error-container:#FFDAD6; --md-on-error:#FFFFFF; --md-on-error-container:#410002;
+  --md-warning:#8A5300; --md-warning-container:#FFDEA6; --md-on-warning-container:#2A1800;
+  --md-success:#146C2E; --md-success-container:#B6F2C4; --md-on-success-container:#002109;
+  --shape-xs:8px; --shape-sm:12px; --shape-md:16px; --shape-lg:20px; --shape-xl:28px; --shape-full:999px;
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:24px; --sp-6:32px; --sp-7:48px;
+  --font:'Google Sans','Roboto',system-ui,-apple-system,'Segoe UI',sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--font);background:#eef0f6;color:var(--md-on-surface);padding:var(--sp-6)}
+h1{font-size:24px;margin:0 0 4px}
+p.sub{color:var(--md-on-surface-variant);margin:0 0 var(--sp-5);max-width:780px;line-height:1.5}
+a.back{color:var(--md-primary);font-size:13px;text-decoration:none}
+.flag{background:var(--md-warning-container);color:var(--md-on-warning-container);border-radius:var(--shape-md);padding:12px 16px;font-size:13px;line-height:1.5;max-width:780px;margin:0 0 var(--sp-5)}
+.tabs input{display:none}
+.tabbar{display:flex;gap:var(--sp-2);margin-bottom:var(--sp-5);flex-wrap:wrap}
+.tabbar label{cursor:pointer;padding:8px 16px;border-radius:var(--shape-full);background:var(--md-surface-container-lowest);border:1px solid var(--md-outline-variant);font-size:13px;font-weight:600;color:var(--md-on-surface-variant)}
+.panel{display:none}
+#s1:checked ~ .stage .p1{display:block}
+#s2:checked ~ .stage .p2{display:block}
+#s3:checked ~ .stage .p3{display:block}
+#s4:checked ~ .stage .p4{display:block}
+#s5:checked ~ .stage .p5{display:block}
+#s6:checked ~ .stage .p6{display:block}
+#s1:checked ~ .tabbar label[for=s1], #s2:checked ~ .tabbar label[for=s2], #s3:checked ~ .tabbar label[for=s3],
+#s4:checked ~ .tabbar label[for=s4], #s5:checked ~ .tabbar label[for=s5], #s6:checked ~ .tabbar label[for=s6]
+{background:var(--md-primary);color:var(--md-on-primary);border-color:var(--md-primary)}
+.device{width:390px;height:790px;background:var(--md-surface);border-radius:36px;box-shadow:0 12px 40px rgba(20,20,40,.18);overflow:hidden;display:flex;flex-direction:column;border:8px solid #1c1c1e;position:relative}
+.statusbar{height:28px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;font-size:12px;font-weight:600;flex:none}
+.content{flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 var(--sp-5) var(--sp-6);text-align:center}
+.hero-icon{width:76px;height:76px;border-radius:var(--shape-xl);background:var(--md-primary-container);color:var(--md-on-primary-container);display:flex;align-items:center;justify-content:center;margin:0 auto var(--sp-5)}
+.hero-icon.warn{background:var(--md-warning-container);color:var(--md-on-warning-container)}
+.hero-icon.success{background:var(--md-success-container);color:var(--md-on-success-container)}
+.hero-icon svg{width:36px;height:36px}
+.content h3{font-size:21px;margin:0 0 10px;font-weight:700}
+.content p{font-size:13.5px;color:var(--md-on-surface-variant);line-height:1.55;margin:0 0 var(--sp-5)}
+.btn{padding:15px 22px;border-radius:var(--shape-full);font-size:14.5px;font-weight:700;border:none;width:100%;display:block;text-align:center;margin-bottom:10px}
+.btn-filled{background:var(--md-primary);color:var(--md-on-primary)}
+.btn-text{background:none;color:var(--md-on-surface-variant);font-weight:600}
+.os-dialog{background:#fff;border-radius:18px;padding:18px;text-align:left;box-shadow:0 6px 20px rgba(0,0,0,.15);margin-bottom:var(--sp-5);border:1px solid #e2e2e6}
+.os-dialog b{font-size:14px;display:block;margin-bottom:6px}
+.os-dialog p{font-size:12px;margin:0 0 14px;color:#444}
+.os-dialog .row{display:flex;justify-content:flex-end;gap:16px}
+.os-dialog .row span{font-size:13px;font-weight:700;color:#4256E5}
+</style>
+</head>
+<body>
+<a class="back" href="./00-index.html">&larr; all mockups</a>
+<h1>5. Permission prompts</h1>
+<p class="sub">Two separate gates (routed q.1 and a known Android constraint): the notification runtime permission (Android 13+, always needed) and the exact-alarm permission (conditional).</p>
+<div class="flag"><b>Design recommendation:</b> day/week-granularity reminders (coarsest stage: 6 months; finest: 1 day) don't need minute-precision delivery. Inexact scheduling should be sufficient. I've mocked the exact-alarm screen below so it exists if developer's spike says otherwise — but it's designed as an optional settings-screen link, not an onboarding step, so it can be cut with zero rework if unneeded.</p></div>
+
+<div class="tabs">
+<input type="radio" name="st" id="s1" checked>
+<input type="radio" name="st" id="s2">
+<input type="radio" name="st" id="s3">
+<input type="radio" name="st" id="s4">
+<input type="radio" name="st" id="s5">
+<input type="radio" name="st" id="s6">
+<div class="tabbar">
+  <label for="s1">Notifications — Prime</label>
+  <label for="s2">Notifications — Granted</label>
+  <label for="s3">Notifications — Denied (recovery)</label>
+  <label for="s4">Exact alarm — Prompt (conditional)</label>
+  <label for="s5">Exact alarm — Granted</label>
+  <label for="s6">Exact alarm — Denied (recovery)</label>
+</div>
+<div class="stage">
+
+<div class="panel p1"><div class="device">
+  <div class="statusbar"><span>9:41</span><span>●●● 5G 100%</span></div>
+  <div class="content">
+    <div class="hero-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M6 10a6 6 0 1 1 12 0c0 4 1.5 5.5 1.5 5.5H4.5S6 14 6 10z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M10 18.5a2 2 0 0 0 4 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></div>
+    <h3>Turn on reminders</h3>
+    <p>This is the whole point of the app — without notifications, we can only show you a list you have to remember to check yourself.</p>
+    <div class="btn btn-filled">Allow notifications</div>
+    <div class="btn btn-text">Not now</div>
+  </div>
+</div></div>
+
+<div class="panel p2"><div class="device">
+  <div class="statusbar"><span>9:41</span><span>●●● 5G 100%</span></div>
+  <div class="content">
+    <div class="os-dialog"><b>Allow renewal-reminder to send you notifications?</b><p>Android system dialog — appears after tapping "Allow notifications" above.</p><div class="row"><span>Don't allow</span><span>Allow</span></div></div>
+    <div class="hero-icon success"><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4 10-10" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <h3>You're all set</h3>
+    <p>We'll only reach out when a reminder is actually due — see the design doc for exactly how often.</p>
+    <div class="btn btn-filled">Continue</div>
+  </div>
+</div></div>
+
+<div class="panel p3"><div class="device">
+  <div class="statusbar"><span>9:41</span><span>●●● 5G 100%</span></div>
+  <div class="content">
+    <div class="hero-icon warn"><svg viewBox="0 0 24 24" fill="none"><path d="M12 7v6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><circle cx="12" cy="17" r="1.3" fill="currentColor"/></svg></div>
+    <h3>Notifications are off</h3>
+    <p>You can still track everything and see status on the list — you just won't be reminded automatically. Turn it on anytime from Settings.</p>
+    <div class="btn btn-filled">Open notification settings</div>
+    <div class="btn btn-text">Continue without reminders</div>
+  </div>
+</div></div>
+
+<div class="panel p4"><div class="device">
+  <div class="statusbar"><span>9:41</span><span>●●● 5G 100%</span></div>
+  <div class="content">
+    <div class="hero-icon"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.8"/><path d="M12 7.5V12l3 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+    <h3>Precise reminder timing</h3>
+    <p>Android asks separately before letting apps schedule alarms at an exact time. This is optional — reminders still arrive the same day either way.</p>
+    <div class="btn btn-filled">Allow exact timing</div>
+    <div class="btn btn-text">Skip — same-day timing is fine</div>
+  </div>
+</div></div>
+
+<div class="panel p5"><div class="device">
+  <div class="statusbar"><span>9:41</span><span>●●● 5G 100%</span></div>
+  <div class="content">
+    <div class="hero-icon success"><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4 10-10" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <h3>Exact timing on</h3>
+    <p>Reminders will fire at the precise time of day you'd expect, not just sometime that day.</p>
+    <div class="btn btn-filled">Continue</div>
+  </div>
+</div></div>
+
+<div class="panel p6"><div class="device">
+  <div class="statusbar"><span>9:41</span><span>●●● 5G 100%</span></div>
+  <div class="content">
+    <div class="hero-icon warn"><svg viewBox="0 0 24 24" fill="none"><path d="M12 7v6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><circle cx="12" cy="17" r="1.3" fill="currentColor"/></svg></div>
+    <h3>That's fine — nothing changes</h3>
+    <p>Reminders still arrive the same day; they just aren't pinned to an exact minute. You can turn this on later from Settings if you ever want to.</p>
+    <div class="btn btn-filled">Continue</div>
+  </div>
+</div></div>
+
+</div>
+</div>
+</body>
+</html>
