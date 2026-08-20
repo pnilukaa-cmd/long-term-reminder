@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>renewal-reminder — Notification tray (new)</title>
+<style>
+:root{
+  --md-primary:#4256E5; --md-on-primary:#FFFFFF; --md-primary-container:#DEE1FF; --md-on-primary-container:#00135A;
+  --md-secondary:#5C5D72; --md-secondary-container:#E1E0F9; --md-on-secondary-container:#191A2C;
+  --md-surface:#FBF8FF; --md-surface-dim:#DBD9E3; --md-surface-container-lowest:#FFFFFF; --md-surface-container-low:#F5F2FA;
+  --md-surface-container:#EFEDF6; --md-surface-container-high:#E9E7F1; --md-surface-container-highest:#E3E1EC;
+  --md-on-surface:#1B1B23; --md-on-surface-variant:#46464F; --md-outline:#777680; --md-outline-variant:#C7C5D0;
+  --md-error:#BA1A1A; --md-error-container:#FFDAD6; --md-on-error:#FFFFFF; --md-on-error-container:#410002;
+  --md-warning:#8A5300; --md-warning-container:#FFDEA6; --md-on-warning-container:#2A1800;
+  --md-success:#146C2E; --md-success-container:#B6F2C4; --md-on-success-container:#002109;
+  --cat-passport-c:#D3E4FF; --cat-passport-on:#001C3B;
+  --cat-insurance-c:#B8EAE3; --cat-insurance-on:#00201C;
+  --cat-licence-c:#EDDCFF; --cat-licence-on:#26005E;
+  --cat-vehicle-c:#F0D9C8; --cat-vehicle-on:#2B1500;
+  --cat-warranty-c:#DDE3F5; --cat-warranty-on:#131C2E;
+  --cat-health-c:#F6D9E6; --cat-health-on:#4A1030;
+  --cat-custom-c:#E5E1EC; --cat-custom-on:#201B29;
+  --shape-xs:8px; --shape-sm:12px; --shape-md:16px; --shape-lg:20px; --shape-xl:28px; --shape-full:999px;
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:24px; --sp-6:32px; --sp-7:48px;
+  --font:'Google Sans','Roboto',system-ui,-apple-system,'Segoe UI',sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--font);background:#eef0f6;color:var(--md-on-surface);padding:var(--sp-6)}
+h1{font-size:24px;margin:0 0 4px}
+p.sub{color:var(--md-on-surface-variant);margin:0 0 var(--sp-5);max-width:780px;line-height:1.5}
+a.back{color:var(--md-primary);font-size:13px;text-decoration:none}
+.tabs input{display:none}
+.tabbar{display:flex;gap:var(--sp-2);margin-bottom:var(--sp-5);flex-wrap:wrap}
+.tabbar label{cursor:pointer;padding:8px 16px;border-radius:var(--shape-full);background:var(--md-surface-container-lowest);border:1px solid var(--md-outline-variant);font-size:13px;font-weight:600;color:var(--md-on-surface-variant)}
+.panel{display:none}
+#s1:checked ~ .stage .p1{display:block}
+#s2:checked ~ .stage .p2{display:block}
+#s3:checked ~ .stage .p3{display:block}
+#s4:checked ~ .stage .p4{display:block}
+#s1:checked ~ .tabbar label[for=s1],
+#s2:checked ~ .tabbar label[for=s2],
+#s3:checked ~ .tabbar label[for=s3],
+#s4:checked ~ .tabbar label[for=s4]{background:var(--md-primary);color:var(--md-on-primary);border-color:var(--md-primary)}
+
+.device{width:390px;height:790px;background:#e4e2ea;border-radius:36px;box-shadow:0 12px 40px rgba(20,20,40,.18);overflow:hidden;display:flex;flex-direction:column;border:8px solid #1c1c1e;position:relative}
+.statusbar{height:28px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;font-size:12px;font-weight:600;color:var(--md-on-surface);flex:none}
+.shade-head{padding:6px var(--sp-4) 14px;color:var(--md-on-surface-variant);font-size:12px}
+.shade{flex:1;overflow-y:auto;padding:0 var(--sp-3) var(--sp-5)}
+
+/* --- one Android-style notification card --- */
+.notif{background:var(--md-surface-container-lowest);border-radius:18px;padding:14px 14px 12px;margin-bottom:10px;box-shadow:0 1px 3px rgba(20,20,40,.08)}
+.notif .n-top{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.notif .n-appicon{width:18px;height:18px;border-radius:5px;background:var(--md-primary);color:#fff;display:flex;align-items:center;justify-content:center;flex:none}
+.notif .n-appicon svg{width:11px;height:11px}
+.notif .n-appname{font-size:11px;font-weight:700;color:var(--md-on-surface-variant);flex:1}
+.notif .n-time{font-size:11px;color:var(--md-on-surface-variant)}
+.notif .n-body{display:flex;gap:10px;align-items:flex-start}
+.notif .n-icon{width:38px;height:38px;border-radius:999px;display:flex;align-items:center;justify-content:center;flex:none}
+.notif .n-icon svg{width:18px;height:18px}
+.notif .n-txt{flex:1;min-width:0}
+.notif .n-title{font-size:13.5px;font-weight:700;margin:0 0 2px}
+.notif .n-msg{font-size:12.5px;color:var(--md-on-surface-variant);line-height:1.4;margin:0}
+.notif .n-actions{display:flex;gap:8px;margin-top:10px;padding-left:48px}
+.notif .n-action{font-size:12px;font-weight:700;color:var(--md-primary);padding:7px 12px;border-radius:var(--shape-full);background:var(--md-surface-container-high)}
+
+/* --- grouped/summary notification --- */
+.notif.group{border:1.5px solid var(--md-outline-variant)}
+.group-lines{margin-top:8px;padding-left:48px;display:flex;flex-direction:column;gap:5px}
+.group-line{font-size:11.5px;color:var(--md-on-surface-variant);display:flex;align-items:center;gap:6px}
+.group-line .gl-dot{width:6px;height:6px;border-radius:999px;flex:none}
+.group-count{font-size:11px;font-weight:700;color:var(--md-primary);background:var(--md-primary-container);padding:2px 8px;border-radius:var(--shape-full);flex:none}
+
+.section-note{font-size:12px;color:var(--md-on-surface-variant);text-align:center;margin:10px 0 4px;padding:0 8px}
+.chip-note{display:inline-block;background:var(--md-warning-container);color:var(--md-on-warning-container);font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:var(--shape-full);margin:0 auto 10px;display:block;width:fit-content}
+</style>
+</head>
+<body>
+<a class="back" href="./00-index.html">&larr; all mockups</a>
+<h1>7. Notification tray (new)</h1>
+<p class="sub">Not an in-app screen — a mock of what actually lands in the Android notification shade, since notification grouping (scope doc §6, P0) is a system-tray-level change that doesn't touch list or item detail. Covers a single ladder-stage notification, a single overdue nag, and the new grouped/summary notification in both its collapsed and expanded states.</p>
+
+<div class="tabs">
+<input type="radio" name="st" id="s1" checked>
+<input type="radio" name="st" id="s2">
+<input type="radio" name="st" id="s3">
+<input type="radio" name="st" id="s4">
+<div class="tabbar">
+  <label for="s1">Single — ladder stage</label>
+  <label for="s2">Single — overdue nag</label>
+  <label for="s3">Grouped — collapsed (new)</label>
+  <label for="s4">Grouped — expanded (new)</label>
+</div>
+<div class="stage">
+
+<!-- SINGLE LADDER STAGE -->
+<div class="panel p1">
+<div class="device">
+  <div class="statusbar"><span>9:41</span><span>●●● 5G 100%</span></div>
+  <div class="shade-head">Today</div>
+  <div class="shade">
+    <div class="notif">
+      <div class="n-top">
+        <div class="n-appicon"><svg viewBox="0 0 24 24" fill="none"><path d="M6 10a6 6 0 1 1 12 0c0 4 1.5 5.5 1.5 5.5H4.5S6 14 6 10z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div>
+        <div class="n-appname">renewal-reminder</div>
+        <div class="n-time">now</div>
+      </div>
+      <div class="n-body">
+        <div class="n-icon" style="background:var(--cat-vehicle-c);color:var(--cat-vehicle-on)"><svg viewBox="0 0 24 24" fill="none"><path d="M4 16v-3.5l2-4.5h12l2 4.5V16" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M4 16h16v2a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H7v1a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-2z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></div>
+        <div class="n-txt">
+          <div class="n-title">MOT — Honda Civic · due in 3 days</div>
+          <div class="n-msg">Jul 2. Worth booking this week if you haven't already.</div>
+        </div>
+      </div>
+      <div class="n-actions">
+        <div class="n-action">Mark done</div>
+        <div class="n-action">Snooze 2 weeks</div>
+      </div>
+    </div>
+    <p class="section-note">Plain, matter-of-fact copy — no urgency-stacking on top of the icon's own colour. See design doc §4.</p>
+  </div>
+</div>
+</div>
+
+<!-- SINGLE OVERDUE NAG -->
+<div class="panel p2">
+<div class="device">
+  <div class="statusbar"><span>9:41</span><span>●●● 5G 100%</span></div>
+  <div class="shade-head">Today</div>
+  <div class="shade">
+    <div class="notif">
+      <div class="n-top">
+        <div class="n-appicon"><svg viewBox="0 0 24 24" fill="none"><path d="M6 10a6 6 0 1 1 12 0c0 4 1.5 5.5 1.5 5.5H4.5S6 14 6 10z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div>
+        <div class="n-appname">renewal-reminder</div>
+        <div class="n-time">now</div>
+      </div>
+      <div class="n-body">
+        <div class="n-icon" style="background:var(--cat-insurance-c);color:var(--cat-insurance-on)"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></div>
+        <div class="n-txt">
+          <div class="n-title">Car insurance — still open</div>
+          <div class="n-msg">Was due 6 days ago. Still need to sort this?</div>
+        </div>
+      </div>
+      <div class="n-actions">
+        <div class="n-action">Mark done</div>
+        <div class="n-action">Snooze 2 weeks</div>
+      </div>
+    </div>
+    <p class="section-note">No blame language ("you forgot"). Collaborative tone, matches the de-escalating cadence in design doc §2.</p>
+  </div>
+</div>
+</div>
+
+<!-- GROUPED / COLLAPSED -->
+<div class="panel p3">
+<div class="device">
+  <div class="statusbar"><span>9:41</span><span>●●● 5G 100%</span></div>
+  <div class="shade-head">Today</div>
+  <div class="shade">
+    <span class="chip-note">New — P0, scope doc §6</span>
+    <div class="notif group">
+      <div class="n-top">
+        <div class="n-appicon"><svg viewBox="0 0 24 24" fill="none"><path d="M6 10a6 6 0 1 1 12 0c0 4 1.5 5.5 1.5 5.5H4.5S6 14 6 10z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div>
+        <div class="n-appname">renewal-reminder</div>
+        <div class="n-time">now</div>
+      </div>
+      <div class="n-body">
+        <div class="n-icon" style="background:var(--md-surface-container-high);color:var(--md-on-surface-variant)"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="5" width="16" height="14" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M4 9h16" stroke="currentColor" stroke-width="1.6"/></svg></div>
+        <div class="n-txt">
+          <div class="n-title">3 renewals need attention</div>
+          <div class="n-msg">Car insurance, MOT — Honda Civic +1 more</div>
+        </div>
+        <div class="group-count">3</div>
+      </div>
+    </div>
+    <p class="section-note">Collapsed — one notification, not three, when their scheduled pushes land the same calendar day. Tap to expand (next tab). Copy is specific to the items involved, not a generic "you have new notifications."</p>
+  </div>
+</div>
+</div>
+
+<!-- GROUPED / EXPANDED -->
+<div class="panel p4">
+<div class="device">
+  <div class="statusbar"><span>9:41</span><span>●●● 5G 100%</span></div>
+  <div class="shade-head">Today</div>
+  <div class="shade">
+    <span class="chip-note">New — P0, scope doc §6</span>
+    <div class="notif group">
+      <div class="n-top">
+        <div class="n-appicon"><svg viewBox="0 0 24 24" fill="none"><path d="M6 10a6 6 0 1 1 12 0c0 4 1.5 5.5 1.5 5.5H4.5S6 14 6 10z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div>
+        <div class="n-appname">renewal-reminder</div>
+        <div class="n-time">now</div>
+      </div>
+      <div class="n-body">
+        <div class="n-icon" style="background:var(--md-surface-container-high);color:var(--md-on-surface-variant)"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="5" width="16" height="14" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M4 9h16" stroke="currentColor" stroke-width="1.6"/></svg></div>
+        <div class="n-txt">
+          <div class="n-title">3 renewals need attention</div>
+          <div class="n-msg">Tap an item below to open it</div>
+        </div>
+      </div>
+      <div class="group-lines">
+        <div class="group-line"><span class="gl-dot" style="background:var(--md-error)"></span>Car insurance · overdue</div>
+        <div class="group-line"><span class="gl-dot" style="background:var(--md-warning)"></span>MOT — Honda Civic · 3 days before</div>
+        <div class="group-line"><span class="gl-dot" style="background:var(--cat-health-on)"></span>Dental checkup · 30 days before</div>
+      </div>
+    </div>
+    <p class="section-note">Expanded — standard Android inbox-style group, each line independently tappable to that item's detail screen. Mixing an overdue nag with upcoming ladder stages in one group is expected and fine; each line's own status text (e.g. "· overdue") still disambiguates without extra grouping logic. See design doc §6a for what this does and doesn't fix in the worst-case volume math.</p>
+  </div>
+</div>
+</div>
+
+</div>
+</div>
+</body>
+</html>

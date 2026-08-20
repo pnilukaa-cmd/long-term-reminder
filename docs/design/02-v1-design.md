@@ -1,18 +1,32 @@
 # V1 Design Direction — renewal-reminder
 
 Prepared by: ux-designer
-Date: 2026-08-20
-Inputs: `CLAUDE.md`, `docs/product/01-v1-scope.md` (§6 routes six questions here), `docs/research/00-problem-space.md`
+Date: 2026-08-20 (amended same day — see revision note)
+Inputs: `CLAUDE.md`, `docs/product/01-v1-scope.md` (amended — §8 routes five items here), `docs/research/00-problem-space.md`, this doc's own first pass
 Routed to: product-manager (react/prioritize), business-analyst (lock acceptance criteria against this), developer (implement), user (react)
 Mockups: `docs/design/mockups/*.html` — open directly in a browser, no build step, no external dependencies
 
-No shared theme/token source exists yet for this app (first design pass on a brand-new project) — §7 below **is** the theme, proposed for the first time here. It's inlined into every mockup's `<style>` block rather than linked, since these files are meant to be opened standalone.
+No shared theme/token source exists yet for this app — §7 below **is** the theme. It's inlined into every mockup's `<style>` block rather than linked, since these files are meant to be opened standalone.
 
 ---
 
-## 0. Headline answer: notification volume (routed question 2)
+## Revision note (2026-08-20, against the amended scope)
 
-**A fully-paid user tracking 5 items receives roughly 0.9 push notifications per month on average, in steady state, assuming on-time renewals.** That's about one notification every five to six weeks. Full math and the worst-case bound are in §2. This is the number the rest of the design is built to protect — if any later change (more stages, tighter spacing, per-item customization) pushes that average up, treat it as a regression against this constraint, not a free variable.
+product-manager amended the v1 scope after this doc's first pass — three of the five changes are things I flagged as suggested enhancements or open questions myself (undo toast, Custom's lead-time selector), which is a nice loop to close. This revision integrates all of it into one document rather than bolting on an addendum:
+
+1. **Health check — 7th preset type.** New §2a: icon/tint, ladder (30/14/3, mirrors Vehicle/Warranty's action-duration profile), free lead time (30 days), and a lighter 2-stage overdue cadence (Day 0, +30d). The recurrence field ("Remind me every [ ] months") gets real design attention below, not just a copy pass — the hard constraint that it must never read as clinical guidance is genuinely a visual-weight problem, not only a wording one, and I've treated it as such.
+2. **Custom/Other lead-time selector.** New §2b: finalized Short = 7/3/1 days, Medium = 30/7/1 (unchanged default), Long = 90/30/7 days, plus free-tier scaling and placement on the Add/Edit screen.
+3. **Undo toast.** New §4a: visual treatment, copy, and placement relative to the FAB (there's no bottom nav to worry about — see §1). Covers delete and mark-done only, per scope.
+4. **Notification grouping (P0).** New §6a and new mockup `07-notifications.html`: what the grouped/summary notification says and how it expands. This doesn't touch any in-app screen — it's a system-tray-level change — so 01–06 are otherwise unaffected by this item specifically.
+5. **Volume math recomputed.** §0 and §2's math table now reflect the 6-item/7-type portfolio. I re-verified product-manager's ≈1.12/month figure independently rather than taking it on trust (see §2) — it holds, using the same ladder I'm proposing for Health check. I also found and flagged a real gap in what grouping actually protects against in the degenerate worst case — see the caveat at the end of §2.
+
+Warranty is unchanged — product-manager kept it, no action needed on my end. Everything below is the full document with these changes integrated.
+
+---
+
+## 0. Headline answer: notification volume (routed question 2, recomputed)
+
+**A fully-paid user tracking a realistic 6-item portfolio (5 original types + 1 Health check) receives roughly 1.12 push notifications per month on average, in steady state, assuming on-time renewals.** That's about one notification every 3.5–4 weeks — up from one every 5–6 weeks at 5 items, a real ~28% increase, but still nowhere near the 2–6/week range research places disable/uninstall risk in. Full math, and an honest look at where the increase actually bites (the degenerate worst-case week, not steady state), is in §2. **I independently re-derived this number rather than accepting product-manager's recompute on trust — it checks out exactly, using the same Health check ladder (3 stages, 12-month default cycle) I'm proposing in §2a.** This is still the number the rest of the design is built to protect; if any later change pushes the average up, treat it as a regression against this constraint, not a free variable.
 
 ---
 
@@ -28,7 +42,10 @@ No shared theme/token source exists yet for this app (first design pass on a bra
 4. **Paywall / Upgrade** — states: default, loading (billing check), error (purchase failed / billing unavailable), success (purchased confirmation).
 5. **Notification-permission prompt** — our own priming screen ahead of the OS dialog, plus the two outcomes (granted, denied-with-recovery-path).
 6. **Exact-alarm prompt — conditional, and I recommend against needing it.** Day/week-granularity reminders (the coarsest stage is 6 months, the finest is 1 day) do not need minute-precision delivery. `WorkManager`/inexact `AlarmManager` should comfortably deliver a notification within the same day, which is all this product promises. I've mocked this screen so it exists if developer's spike concludes otherwise, but designed it as an **optional settings-screen link, not an onboarding blocker** — if developer confirms it's unnecessary, this screen is cut with zero rework elsewhere, because nothing else depends on it being in the onboarding flow.
-7. **Settings / Privacy** — mostly static: privacy disclosure (local-only, nothing leaves the device — worth stating even though it's table stakes per research, users still expect to see it), notification settings deep-link, restore purchase, about/version.
+7. **Settings / Privacy** — mostly static: privacy disclosure (local-only, nothing leaves the device — worth stating even though it's table stakes per research, users still expect to see it), notification settings deep-link, restore purchase, about/version. The disclaimer text here is now the broadened legal+medical version — see §5's update.
+8. **Notification tray previews (new, `docs/design/mockups/07-notifications.html`)** — not an in-app screen; a mock of what actually lands in the Android notification shade. Covers: a single ladder-stage notification, a single overdue nag, the **grouped/summary notification** (new, P0) when two or more items collapse onto one calendar day, and its expanded state. See §6a.
+
+Two existing screens gained new states rather than new files: Add/Edit (`02-add-edit-item.html`) now has a Health check tab and a Custom-with-selector tab; Item detail (`03-item-detail.html`) now has a Health check tab and the mark-done recurrence bottom sheet (both the generic version and the Health check "same as your setting" version), plus an undo-toast state. Home/List (`01-home-list.html`) gained a 7th empty-state tile, a Health check and a Custom card in the success state, and an undo-toast state.
 
 ### 1a. First-run empty state — treated as a primary design problem
 
@@ -36,7 +53,7 @@ A generic "No items yet — tap + to add" empty state is a dead end: it names th
 
 ---
 
-## 2. Reminder ladders — proposals for all six types, with reasoning
+## 2. Reminder ladders — proposals for all seven types, with reasoning
 
 Travel Document Vault's 6mo/3mo/6wk/2wk/1wk is the given reference for passport. I trimmed it to four stages (merging the 6wk/2wk pair into a single "1 month" stage) — the 6-month and 3-month stages are the ones doing the real work given US passport processing backlogs (research: 4–6 weeks routine processing, guidance to renew with 12+ months validity, common 6-month-remaining entry rules), while a 5th stage in the final month adds volume without adding a materially different action window.
 
@@ -49,7 +66,8 @@ The other five types have no competitor-cited rationale in research, only compet
 | **Professional Licence/Certification** | 90 days, 30 days, 7 days | Renewal usually requires accumulating CE/CPD hours plus board processing time (research: reinstatement after a lapse gets materially worse the longer it runs) — needs lead time an insurance-style reminder doesn't |
 | **Vehicle (generic)** | 30 days, 14 days, 3 days | Same action-duration profile as insurance (book a test/renew tax online, a same-day-to-few-days task); mirrors insurance's shape rather than passport's |
 | **Warranty** | 30 days, 7 days | Pure financial-loss, no legal exposure (research explicitly separates this from the criminal-offence types) — lighter ladder is deliberate, not an oversight |
-| **Custom / Other** | 30 days, 7 days, 1 day | Unknown risk profile; defaults to the most generic competitor convention (Expiro's 30/7/1) since we can't reason about the specific action |
+| **Health check (new — see §2a)** | 30 days, 14 days, 3 days | Booking a medical/dental/vision appointment is a days-to-weeks action, same shape as Vehicle/Warranty, not Passport's months-out profile — mirrors Vehicle exactly on the same reasoning |
+| **Custom / Other (selector — see §2b)** | Short 7/3/1, **Medium 30/7/1 (default, unchanged)**, Long 90/30/7 | Was a single ungrounded guess (Expiro's 30/7/1 convention); now a 3-way selector so the user can say which action-duration profile fits, without full per-stage editing |
 
 **Overdue follow-through (paid only) — de-escalating, not escalating, and type-aware:**
 
@@ -60,13 +78,55 @@ The other five types have no competitor-cited rationale in research, only compet
 | Professional Licence | Day 0, +7d, +21d (3 total) | Consequence compounds gradually (per research), not immediately punitive |
 | Vehicle | Day 0, +3d, +10d, +30d (4 total) | Same daily-risk profile as insurance |
 | Warranty | Day 0 only, then stops | **There is nothing to fix by nagging further** — the warranty window just closes. Continuing to nag about something the user cannot un-expire is the punitive pattern the working relationship should avoid. This is a deliberate type-specific exception, not a missed case. |
-| Custom | Day 0, +7d, +21d (3 total) | Generic default |
+| Health check (new) | Day 0, +30d (2 total, then list-status only) | Deliberately the lightest of the "still worth nagging" types — see §2a for why this isn't Warranty's single-nag pattern, but also isn't Insurance/Vehicle's 3–4 stage daily-risk pattern |
+| Custom | Day 0, +7d, +21d (3 total) | Generic default, all three selector profiles |
 
 Every ladder gets **wider, not tighter**, as it goes — the spacing between nags increases (3d → 10d → 30d, not 30d → 10d → 3d) after the due date. This is the mechanical answer to routed question 4 (how follow-through reads as non-punitive): the app checks in less urgently over time, the opposite of an escalating alarm, and copy never uses blame language ("you forgot") — see §4.
 
+---
+
+### 2a. Health check — the hardest open question in this revision
+
+This is the one item in this amendment I spent the most time on, because it's a genuine unresolved interaction-design problem, not a pick-between-two-known-good-patterns question. The scope doc's constraint is specific: the recurrence field ("Remind me every [ ] months") must *look* like a setting the user chose, never a recommendation the app is making — and that's a visual-weight and placement problem as much as a copy one.
+
+**Why this is hard, not just a copy pass:** every existing visual pattern this app already has for "here's something important about your reminder" reads, by design, as the app being confident and directive — that's the entire point of the ladder-preview card (§1a is even sold on it: "we'll remind you early enough to actually act"). The `ladder-preview` component (see the Add/Edit mockup) is a tinted `primary-container` card with a bold title, a checkmark-adjacent icon, and system-generated copy ("Reminders scheduled"). If the Health check interval field lived inside that same visual language — a tinted card, an icon, a confident headline — it would read exactly like the app asserting "here's your interval," which is precisely the authority implication the scope doc prohibits, regardless of what the copy underneath it says. Copy alone can't undo a container that looks like guidance.
+
+**Rejected approach 1: a labeled dropdown of common intervals** ("Every 6 months / Every 12 months / Every 2 years / Custom"). This is the most common real-world pattern for this kind of field, and I rejected it specifically for this feature — a dropdown of pre-set intervals, even unlabeled ones, implies the app curated a shortlist of *valid* answers, which reintroduces the authority problem one level down (why these four numbers, if not because they're "recommended"?). A freely editable number sidesteps that entirely: there's no implied menu of "correct" answers to compare your own choice against.
+
+**Rejected approach 2: a card with explanatory copy directly under the field** (e.g., "This is your own setting — not medical advice" as a persistent caption under the input, every time). I rejected this as the *primary* mechanism because it fights the field's own visual design instead of fixing it — if the container still looks like a recommendation card, a disclaimer sentence bolted underneath reads as legal boilerplate the user learns to skip, not as something that changes how the field itself is perceived in the half-second before it's read closely. (The one-time inline note at type-selection, which *is* explanatory copy, is a different and correct use of this pattern — see below — because it's about the type generally, once, not a running caption on a form field the user interacts with repeatedly.)
+
+**What I did instead:** the interval field is a plain stepper row — `− [12] months +` — styled with the exact same neutral container, border, and type-scale as the ordinary `Label` and `Due date` fields directly above it in the form, not the tinted `ladder-preview` card. A stepper control is itself a meaningful signal here: steppers read as "a quantity you're setting" (alarm repeat interval, screen-timeout duration) in a way a styled callout never does, because the interaction pattern itself is "adjust this," not "receive this." The only text near it is a single neutral-grey helper line, the same weight as every other field's helper text: "Your call — change this any time." No icon, no badge, no checkmark, no shield, no tinted background. The *ladder preview* generated from that number still appears below in the normal tinted card — but it's visibly downstream of the field, not fused with it, so the causality reads correctly: the user set the number, the app is showing what follows from it, not the reverse.
+
+**The one-time inline note**, shown once when Health check is picked as a type for the first time, is a separate, narrower, and lower-frequency intervention — a plain-text banner (not the primary-tinted callout style used elsewhere), dismissible, sitting between the type row and the rest of the form. Business-analyst owns the exact copy (routed in scope doc §3), but I've placed it here — at the moment of type selection, once — rather than only in Settings, because the medical-advice-adjacent risk is specific to the moment this type is chosen, and burying it in a settings screen the user may never open doesn't cover that moment. See the mockup's dedicated "Health check — first selection" state.
+
+**Ladder, free lead time, overdue cadence (the more mechanical parts of this):**
+- **Icon/tint:** a heart-with-pulse-line glyph, in a dusty rose/berry tonal pair (`--cat-health-c` / `--cat-health-on`) — the 7th and last available tint that doesn't collide with an existing category (blue, teal, violet, terracotta, slate, grey are taken) or a status hue (amber, red, green are reserved). It sits ~30° away from the error-container's red-orange on the hue wheel and reads clearly distinct in the mockups; I'm flagging the hue proximity explicitly here rather than assuming it away, since it's the one category tint sharing a warm-pink family anywhere near status red. If a future qa-tester colorblind-simulation pass finds it's too close, this is the one tint I'd revisit first.
+- **Paid ladder: 30 / 14 / 3 days before** — identical shape to Vehicle, on identical reasoning (booking an appointment is a days-to-weeks action, not a same-day one or a months-out one).
+- **Free lead time: 30 days before** — takes product-manager's directional steer as-is; it's the same number as Warranty's free reminder and sits on the same "useful without being alarmist" logic as §5's table.
+- **Overdue cadence: Day 0, +30 days, then stops.** Lighter than Insurance/Vehicle's 3–4 stage daily-risk pattern, per product-manager's steer, but not Warranty's single-nag pattern either — a missed checkup doesn't compound daily like a lapsed legal document, but unlike an expired warranty window, there's still a real action to catch up on a month later, so one follow-up earns its place. This also directly supports the volume math below: Health check contributes only 2 nag stages to any overdue pile-up, not 3–4.
+- **Mark-done recurrence prompt (scope doc §3b):** reuses the existing bottom-sheet pattern from §4, with the one-tap smart default reading **"Same as your setting — In 12 months"**, sourced from the item's own stored interval value, never a freshly computed suggestion. See the mockup's bottom-sheet state on item detail, and §4's write-up of both the generic and Health-check-specific copy.
+
+---
+
+### 2b. Custom/Other lead-time selector — finalized values
+
+A single 3-way segmented control — **Short / Medium / Long**, default **Medium** — placed on the Add/Edit screen directly below the Due date field when Custom is the selected type, above the ladder preview (so the preview updates live as the selection changes — the user sees the consequence of their choice immediately, not on a separate confirmation).
+
+| Profile | Paid ladder | Free-tier single reminder | Reasoning |
+|---|---|---|---|
+| Short | 7 / 3 / 1 days | 3 days before | Same-day-ish actions — mirrors Insurance's shape at a smaller scale |
+| **Medium (default, unchanged)** | 30 / 7 / 1 days | 7 days before | The existing fixed default — nothing regresses if the user takes no action |
+| Long | 90 / 30 / 7 days | 30 days before | Mirrors Professional Licence's shape — for custom items that need real preparation lead time |
+
+Free tier always shows the profile's **middle stage** as its single reminder, per scope doc §3a — this is what makes the selector meaningful for free users too, not just a paid-tier convenience: choosing "Long" changes what free users see, not only what paid users get escalated.
+
+**Visual treatment:** a segmented control, not a dropdown — three equal-width pill buttons in a single outlined track, matching the existing pill/chip shape language (`--shape-full`) already used for status chips elsewhere, so it reads as a settings-style choice rather than a new component family. This is the same "make it look like the interaction it is" reasoning as §2a's stepper — a segmented control is legible at a glance as "pick one of three," where a dropdown would require an extra tap to even see the options, adding friction to a field product-manager scoped specifically to be low-effort.
+
+---
+
 ### The math behind the headline number
 
-**Steady-state average, 5-item mixed portfolio (1 passport, 1 insurance, 1 vehicle, 1 licence, 1 warranty), on-time renewals, paid tier:**
+**Steady-state average, realistic 6-item portfolio (1 passport, 1 insurance, 1 vehicle, 1 licence, 1 warranty, 1 Health check), on-time renewals, paid tier — recomputed for this amendment, independently re-derived, not taken on trust:**
 
 | Item | Stages/cycle | Cycle length | Avg/month |
 |---|---|---|---|
@@ -75,13 +135,19 @@ Every ladder gets **wider, not tighter**, as it goes — the spacing between nag
 | Vehicle | 3 | 12 mo | 0.25 |
 | Licence | 3 | 12 mo | 0.25 |
 | Warranty | 2 | 24 mo (2 yr) | 0.083 |
-| **Total** | | | **≈ 0.87/month** |
+| Health check (new — §2a: 3 stages, 12-month default cycle) | 3 | 12 mo | 0.25 |
+| **Total** | | | **≈ 1.12/month** |
 
-**Worst-case realistic clustering** (insurance and vehicle happen to renew the same month — common, since people often insure a car right when they register it): peak single week still only reaches ~2 notifications. Comfortably under the 2–6/week range research cites as where a meaningful share of users disable notifications or uninstall.
+**Verdict: budget holds.** 1.12/month is one notification roughly every 3.5–4 weeks — a real ~28% increase over the 5-item figure (0.87/month), but still well under the weekly cadence where research places disable/uninstall risk (2–6/week). Not a regression against the constraint in the sense that matters (steady state, on-time use).
 
-**Degenerate worst case** (all 5 items overdue simultaneously — everything lapsed at once, an edge case, not the design center): 15 overdue nags spread across ~5 weeks, peaking around 5 notifications in the first week (all five "day 0" nags landing together) and tapering. That peak week sits at the edge of, but still inside, the research-cited 2–6/week threshold — worth stating honestly rather than rounding it away, but it only occurs for a user who has let every single tracked item lapse at once, which is a self-selecting scenario already at elevated disable/uninstall risk regardless of what this app does.
+**Worst-case realistic clustering** (insurance and vehicle happen to renew the same month): peak single week still only reaches ~2 notifications, or now collapses to a single grouped notification if they land the exact same day — see §6a.
 
-**If this number ever becomes uncomfortable** (e.g., business-analyst or a tester's portfolio is more concentrated than this example, with several annual items sharing a renewal season), the lever to pull is the *paid* ladder's stage count per short-cycle type, not the free tier — free tier is already a single notification and can't be cut further without breaking the calendar-equivalence promise in §2 of the scope doc.
+**Degenerate worst case** (all 6 items overdue simultaneously): the day-0 nag for a 6th item pushes the theoretical peak week from ~5 to **6 notifications** — now sitting at, not past, the top of the 2–6/week band. Two things follow, and I want to be precise about what grouping actually fixes here rather than wave at it as solved:
+
+- If all six items' day-0 nags happen to land on the **same calendar day** (the scenario the original 5-item version of this doc implicitly assumed — "everything lapsed at once"), grouping collapses that into **one** summary notification instead of six. That's a real, complete fix for that specific shape of worst case.
+- **But grouping only collapses notifications that share a calendar day** — it does not cap a week's total if a user's six items happen to go overdue on six *different* days within the same week (e.g., one every day, Monday through Saturday). In that staggered shape, the user still gets up to 6 separate notifications across the week; grouping doesn't touch it, because there's never more than one notification on any single day to group. I want this stated plainly rather than implied away: **grouping is the right, cheap fix for the same-day-clustering case, but it is not, by itself, a hard cap on weekly volume for every possible overdue distribution.** Whether that residual gap matters is a judgment call, not a design defect — a user with six items overdue in the same week, on any distribution, is already in the self-selecting "let everything lapse" scenario product-manager correctly identifies as elevated disable-risk for reasons unrelated to this app. I'm not asking to redesign around it, but the team should know precisely what "grouping fixes this" does and doesn't mean before treating the degenerate case as closed.
+
+**If this number ever becomes uncomfortable** (e.g., a tester's portfolio is more concentrated than this example, with several annual items sharing a renewal season), the lever to pull is the *paid* ladder's stage count per short-cycle type, not the free tier — free tier is already a single notification and can't be cut further without breaking the calendar-equivalence promise in §2 of the scope doc.
 
 ---
 
@@ -98,9 +164,19 @@ Two levels, deliberately different in density:
 
 ## 4. Mark-as-done and follow-through tone (routed question 4)
 
-- **From the list:** a quick action on the card (tap a "Mark done" affordance, no swipe-only gesture — swipe-to-dismiss is easy to trigger accidentally on a screen full of stacked cards, and this data doesn't have cloud undo). For types that typically recur (insurance, vehicle, licence, and passport at a longer horizon), marking done opens a small bottom sheet: "Nice — when's the next one due?" with a one-tap smart default ("Same time next year" / "+10 years" for passport) plus a manual date picker. Warranty skips the recur prompt (nothing to renew); Custom asks a yes/no "does this repeat?" first, since we don't know its cadence.
-- **From a notification:** the expanded notification carries two actions, **Mark done** and **Snooze 2 weeks**, so most resolutions never require opening the app. Tapping "Mark done" from a notification clears the current cycle and cancels remaining ladder stages immediately; the recurrence question ("when's the next one due?") is deferred to a small inline banner on the item's detail screen the next time the app is opened — **not** a follow-up push notification. Firing a second notification to ask about the first one is exactly the kind of self-inflicted fatigue the research warns about.
+- **From the list:** a quick action on the card (tap a "Mark done" affordance, no swipe-only gesture — swipe-to-dismiss is easy to trigger accidentally on a screen full of stacked cards, and this data doesn't have cloud undo). For types that typically recur (insurance, vehicle, licence, and passport at a longer horizon), marking done opens a small bottom sheet: "Nice — when's the next one due?" with a one-tap smart default ("Same time next year" / "+10 years" for passport) plus a manual date picker. Warranty skips the recur prompt (nothing to renew); Custom asks a yes/no "does this repeat?" first, since we don't know its cadence. **Health check (new) uses the same bottom sheet, but the one-tap default reads "Same as your setting — In 12 months," pulling from the item's own stored interval, never a freshly computed suggestion** — this is the mechanical enforcement of §2a's constraint at the one other moment (besides the field itself) where the interval resurfaces. See the mockup's bottom-sheet state on item detail.
+- **From a notification:** the expanded notification carries two actions, **Mark done** and **Snooze 2 weeks**, so most resolutions never require opening the app. Tapping "Mark done" from a notification clears the current cycle and cancels remaining ladder stages immediately; the recurrence question ("when's the next one due?") is deferred to a small inline banner on the item's detail screen the next time the app is opened — **not** a follow-up push notification. Firing a second notification to ask about the first one is exactly the kind of self-inflicted fatigue the research warns about. Per scope doc §3c, notification-triggered mark-done does **not** get an undo toast (no foreground UI surface exists at that moment) — status can always be manually reverted from item detail regardless.
 - **Tone:** overdue notifications never use blame language ("you forgot," "you failed to..."). Copy stays collaborative and matter-of-fact: *"Insurance renewal — still open"* / *"Still need to sort this?"* with **Mark done** / **Snooze** actions, not a bare dismiss. The visual treatment leans on the existing error/overdue color to carry urgency rather than stacking urgent copy on top of urgent color — see status language in §6.
+
+---
+
+### 4a. Undo toast (new — scope doc §3c)
+
+Covers delete and mark-done, in-app only (list quick-action or item detail), 6-second window, full revert on tap — see the scope doc for the behavioral contract. My job here is the visual treatment and where it sits.
+
+**Visual treatment:** reuses the dark snackbar component already established in the Add/Edit "Saved" confirmation (`docs/design/mockups/02-add-edit-item.html`, success state) rather than inventing a second toast style — same dark surface (`#2b2b33`), same pill shape, same left-icon-plus-text layout. The only addition is a right-aligned **UNDO** action in the primary-container color (so it reads as tappable and distinct from the message text), consistent with standard Material snackbar conventions. Copy is plain and specific, not generic: *"Deleted — Car insurance"* / *"Marked done — MOT, Honda Civic"*, each with an **UNDO** action, so a user managing several toasts in a row (e.g., clearing a backlog of overdue items) can tell at a glance which item each toast refers to without it reading as an error state — deliberately not using the error/warning color roles here, since undo is a safety net, not a problem.
+
+**Placement relative to the FAB (there's no bottom nav — see §1's nav model, so this is a simpler problem than it would be with tab chrome to clear):** the toast sits full-width at the bottom of the content area, and the FAB elevates to sit directly above it for the toast's duration, rather than the toast rendering underneath/behind the FAB or the FAB staying put and getting overlapped. This is standard `CoordinatorLayout`-equivalent behavior on Android (a snackbar anchored to a FAB pushes it up automatically) and costs nothing extra to implement idiomatically. On item detail, where there's no FAB but there is the bottom action bar (Edit / Mark as done), the toast sits above that bar on the same principle — never covering an actionable button. See the new undo-toast states in `01-home-list.html` and `03-item-detail.html`.
 
 ---
 
@@ -115,7 +191,8 @@ Two levels, deliberately different in density:
 | Professional Licence | 30 days before |
 | Vehicle | 14 days before |
 | Warranty | 30 days before |
-| Custom | 14 days before |
+| Health check (new) | 30 days before — same logic as Warranty/Vehicle, per §2a |
+| Custom (new — scales with selector, §2b) | 3 / 7 / 30 days before, matching Short/Medium/Long |
 
 This reframes the upgrade pitch from "we deliberately gave you a bad reminder" to "we'll remind you once — upgrade for the full countdown, plus we'll check that you actually did it." That's the honest difference (escalation + follow-through), and it's the one the positioning already claims is defensible.
 
@@ -129,7 +206,7 @@ The dedicated paywall screen still exists (accessible from settings and from tha
 
 **Two separate encoding systems, deliberately not sharing a color space:**
 
-- **Category tint** (which of the 6 types this is) — a tonal container color pair per type, used only on the type icon/badge.
+- **Category tint** (which of the 7 types this is) — a tonal container color pair per type, used only on the type icon/badge.
 - **Status color** (upcoming / due soon / overdue / done) — a semantic role, used on status chips and the ladder track.
 
 If both systems drew from the same hue family, an amber vehicle icon next to an amber "due soon" chip would be genuinely ambiguous at a glance. Category tints deliberately avoid amber, red, and green — those three hues are reserved for status.
@@ -141,6 +218,7 @@ If both systems drew from the same hue family, an amber vehicle icon next to an 
 | Professional Licence | ribbon/certificate | Violet |
 | Vehicle | car | Terracotta/clay (not amber) |
 | Warranty | box + check | Slate blue-grey |
+| Health check (new) | heart + pulse line | Dusty rose/berry (`--cat-health-c` / `--cat-health-on`) — see §2a for why this is the one tint I'd revisit first if colorblind testing flags it |
 | Custom | star/asterisk | Neutral grey |
 
 **Status language — encoded on four channels at once (shape, icon glyph, color, text label), not color alone**, both for accessibility (colorblind-safe) and because the brief specifically asks status to read in form as well as color:
@@ -156,6 +234,20 @@ Done items also drop to reduced opacity and collapse into a "Done" group below t
 
 ---
 
+### 6a. Notification grouping (new, P0 — scope doc §6)
+
+Not an in-app screen — a system-tray-level change, confirmed against the mockups in `docs/design/mockups/07-notifications.html` (new file). List and item detail are otherwise unaffected, per the scope doc's own routing note.
+
+**What it looks like collapsed:** when two or more items' notifications land on the same calendar day, Android's standard grouped/summary pattern applies — one visible notification in the shade, using `NotificationCompat`'s group summary mechanism (developer's implementation call, already scoped in §8 of the scope doc). Summary line: **"3 renewals need attention"** (count-driven, not a generic app-name repost) with a secondary line listing the item labels, truncated with "+N more" past two or three: *"Car insurance, MOT — Honda Civic +1 more."* This is deliberately specific rather than a bare "You have new notifications" — the whole point of this product is that each reminder is about something concrete, and a vague summary would undercut that at the exact moment several concrete things are competing for attention.
+
+**What it looks like expanded:** standard Android expanded/inbox-style grouped notification — each underlying notification's own line is visible (item label + its specific stage, e.g., "MOT — Honda Civic · 3 days before," "Car insurance · overdue"), each independently tappable to that item's detail screen. This preserves per-item specificity once the user chooses to look closer, rather than forcing them into the app just to find out what's in the bundle.
+
+**Tone/type mixing inside one group:** a grouped notification can legitimately contain a mix of upcoming-ladder-stage and overdue-nag notifications on the same day. I did not design a separate visual treatment to distinguish these within the group beyond each line's own status language (the overdue one still reads "· overdue," matching the app's existing status vocabulary) — a second layer of grouping logic (e.g., splitting into an "overdue" group and an "upcoming" group on the same day) would be real added complexity for a genuinely rare double-collision, and the per-line status text already disambiguates without it.
+
+**What this does and doesn't fix:** see §2's worst-case math — grouping fully resolves same-day clustering, but does not cap weekly volume when overdue items are staggered across different days within a week. Stated once there in full; not re-litigated here.
+
+---
+
 ## 7. Proposed theme tokens (new — no prior theme exists for this app)
 
 Material 3 Expressive baseline: tonal color roles, larger/varied corner radii, bolder type. Full CSS custom-property block is inlined in every mockup; summarized here for developer handoff.
@@ -165,6 +257,8 @@ Material 3 Expressive baseline: tonal color roles, larger/varied corner radii, b
 - `--md-success` / `--md-success-container` / `--md-on-success-container` — used only for "done" status.
 
 Everything else (primary/secondary/surface containers/error/outline) follows stock M3 role naming so developer can map directly onto Android's `MaterialTheme` / `ColorScheme` (Compose) without renaming.
+
+**One category-tint pair added this revision:** `--cat-health-c` (`#F6D9E6`) / `--cat-health-on` (`#4A1030`) — Health check's dusty rose/berry tint (§2a, §6). No other token roles needed adding for this amendment; the undo toast and grouped notification both reuse existing roles (surface/primary-container) rather than introducing new ones.
 
 **Shape scale:** `--shape-xs 8px, --shape-sm 12px, --shape-md 16px, --shape-lg 20px, --shape-xl 28px, --shape-full 999px` — cards at `lg`, the FAB and stage markers at `xl`/`full`, chips at `full`. M3 Expressive leans into rounder, larger radii than M2; this scale reflects that.
 
@@ -184,26 +278,32 @@ Exact values are in the `:root` block at the top of each mockup file — identic
 - **Escalating (tightening) overdue cadence, matching a more aggressive competitor pattern** — rejected on fatigue data; used a de-escalating cadence instead.
 - **Exact-alarm permission as a mandatory onboarding step** — designed as optional and deferred instead, pending developer's feasibility check, specifically so it can be cut with zero rework if unneeded.
 - **Free tier's single reminder at the ladder's closest-to-due stage** (a literal reading of the scope doc) — rejected for long-lead types; tuned per type instead so the free tier doesn't set users up to fail on items like passport.
+- **(New this revision) A labeled dropdown of common recheck intervals for Health check** (e.g., "6 months / 12 months / 2 years / Custom") — rejected in favor of a freely editable stepper; see §2a for the full reasoning — a curated shortlist reintroduces the "the app is telling you what's valid" problem one level down from a locked recommendation.
+- **(New this revision) A persistent disclaimer caption directly under the Health check interval field, as the primary mechanism for the "not medical advice" constraint** — rejected in favor of fixing the field's *container* (plain stepper, not a tinted callout) so the constraint is satisfied by what the field looks like, not only by a sentence a user learns to skip. See §2a.
+- **(New this revision) A second grouping layer splitting overdue vs. upcoming notifications within the same day's summary** — rejected as complexity for a rare double-collision; per-line status text inside the expanded group already disambiguates. See §6a.
 
 ---
 
 ## Open questions for product-manager / user
 
-1. Does the free-tier reminder-timing table in §5 (deviating from a literal "single reminder ahead of due date" reading) match intent, or was a fixed single lead time (e.g., always 7 days, regardless of type) actually preferred for simplicity? I'd push back on that being simpler-but-worse for passport specifically.
-2. Is the Custom type's fixed 30/7/1 ladder acceptable, or should it get a cheap escape hatch (see Suggested Enhancements — a single short/medium/long lead-time selector, not full per-stage editing) given it's the one type where the default is a guess?
-3. Confirm the worst-case "all 5 items overdue at once" peak (~5 notifications in one week) is an acceptable edge case to accept rather than design further against.
+1. **(Carried over, now resolved)** Custom's lead-time selector — accepted into scope; Short/Long values finalized in §2b.
+2. **(Carried over, now resolved)** Undo toast — accepted into scope; treatment in §4a.
+3. **(New)** §2's worst-case math note: grouping fully fixes same-day-clustering but not a staggered-across-the-week overdue pile-up. I'm not proposing to design further against the staggered case — flagging it so the team is choosing to accept it explicitly, not by omission.
+4. **(New)** The Health check category tint (dusty rose/berry) is the one color choice in this revision I'd most want a second look at — it's in the same warm-pink family as the error role, just at a different hue angle and lightness. Worth a deliberate glance side-by-side (mockup `00-index.html` swatches) rather than trusting my read of it alone.
+5. Does the free-tier reminder-timing table in §5 (deviating from a literal "single reminder ahead of due date" reading) match intent, or was a fixed single lead time actually preferred for simplicity? Still open from the original pass — unchanged by this amendment.
 
 ---
 
 ## Suggested enhancements (beyond what was asked — for triage, not commitments)
 
+Two items from the previous pass's table are now in scope (undo toast, Custom selector) and have been removed from this list accordingly — they're specified above, not pending triage anymore.
+
 | Idea | Why | Impact |
 |---|---|---|
-| Undo toast after "mark done" / delete | Local-only storage means no cloud undo; an accidental tap is unrecoverable without this. Cheap (a toast + a few seconds' grace), meaningfully reduces error-recovery anxiety. | **High**, low effort — worth reconsidering for v1 itself, not just backlog |
-| Custom type: single short/medium/long lead-time selector (not full ladder editing) | Custom is the one type where a fixed default is a guess, not a grounded proposal; a single dropdown is far cheaper than the deferred full per-stage editing (P1 in scope doc) | Medium |
 | Tap-to-explain on the ladder track ("Based on typical passport processing time") | Builds trust in the ladder's timing specifically where research couldn't fully validate the numbers — directly supports the paid pitch | Medium |
-| Home-screen summary line for paid users ("5 items · full ladder active") | Cheap, ongoing reminder of what was purchased, without another notification | Low–Medium |
+| Home-screen summary line for paid users ("6 items · full ladder active") | Cheap, ongoing reminder of what was purchased, without another notification | Low–Medium |
 | Snooze duration picker (not fixed 2 weeks) | More flexible, but real added complexity for a P2-feeling need | Low |
+| **(New this revision)** A visible, persistent "N items overdue" count somewhere in the app icon/list header, distinct from any individual notification | If the team ever revisits the staggered-overdue-week gap noted in §2/§6a, an in-app aggregate view is a cheaper lever than more notification-side engineering — it moves the "catch up" moment into the app instead of the tray | Low, speculative — only worth it if the staggered-week gap turns out to matter in practice |
 
 ---
 
@@ -211,10 +311,11 @@ Exact values are in the `:root` block at the top of each mockup file — identic
 
 | Screen | Loading | Empty | Error | Success |
 |---|---|---|---|---|
-| Home/List | ✓ skeleton | ✓ first-run type-picker | ✓ read-failure retry | ✓ grouped by status |
-| Add/Edit | ✓ saving spinner | ✓ blank form | ✓ validation error | ✓ saved confirmation |
-| Item detail | ✓ skeleton | n/a (always has data) | ✓ not found | ✓ free-tier + ✓ paid-tier |
+| Home/List | ✓ skeleton | ✓ first-run type-picker (now 7 tiles) | ✓ read-failure retry | ✓ grouped by status, + ✓ undo-toast (delete/mark-done) |
+| Add/Edit | ✓ saving spinner | ✓ blank form | ✓ validation error | ✓ saved confirmation, + ✓ Health check selected (recurrence field + one-time note), + ✓ Custom with lead-time selector |
+| Item detail | ✓ skeleton | n/a (always has data) | ✓ not found | ✓ free-tier + ✓ paid-tier + ✓ Health check + ✓ mark-done recurrence bottom sheet + ✓ undo-toast |
 | Paywall | ✓ billing check | n/a | ✓ purchase failed | ✓ purchased |
 | Notification permission | n/a (instant) | n/a | ✓ denied-recovery | ✓ granted |
 | Exact-alarm (conditional) | n/a | n/a | ✓ denied-recovery | ✓ granted |
-| Settings/Privacy | ✓ | n/a (static) | ✓ load failure | ✓ populated |
+| Settings/Privacy | ✓ | n/a (static) | ✓ load failure | ✓ populated (broadened legal+medical disclaimer) |
+| Notification tray (new, `07-notifications.html`) | n/a | n/a | n/a | ✓ single stage, ✓ single overdue nag, ✓ grouped/collapsed, ✓ grouped/expanded |

@@ -18,6 +18,7 @@
   --cat-licence-c:#EDDCFF; --cat-licence-on:#26005E;
   --cat-vehicle-c:#F0D9C8; --cat-vehicle-on:#2B1500;
   --cat-warranty-c:#DDE3F5; --cat-warranty-on:#131C2E;
+  --cat-health-c:#F6D9E6; --cat-health-on:#4A1030;
   --cat-custom-c:#E5E1EC; --cat-custom-on:#201B29;
   --shape-xs:8px; --shape-sm:12px; --shape-md:16px; --shape-lg:20px; --shape-xl:28px; --shape-full:999px;
   --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:24px; --sp-6:32px; --sp-7:48px;
@@ -36,10 +37,14 @@ a.back{color:var(--md-primary);font-size:13px;text-decoration:none}
 #s2:checked ~ .stage .p2{display:block}
 #s3:checked ~ .stage .p3{display:block}
 #s4:checked ~ .stage .p4{display:block}
+#s5:checked ~ .stage .p5{display:block}
+#s6:checked ~ .stage .p6{display:block}
 #s1:checked ~ .tabbar label[for=s1],
 #s2:checked ~ .tabbar label[for=s2],
 #s3:checked ~ .tabbar label[for=s3],
-#s4:checked ~ .tabbar label[for=s4]{background:var(--md-primary);color:var(--md-on-primary);border-color:var(--md-primary)}
+#s4:checked ~ .tabbar label[for=s4],
+#s5:checked ~ .tabbar label[for=s5],
+#s6:checked ~ .tabbar label[for=s6]{background:var(--md-primary);color:var(--md-on-primary);border-color:var(--md-primary)}
 .device{width:390px;height:790px;background:var(--md-surface);border-radius:36px;box-shadow:0 12px 40px rgba(20,20,40,.18);overflow:hidden;display:flex;flex-direction:column;border:8px solid #1c1c1e;position:relative}
 .statusbar{height:28px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;font-size:12px;font-weight:600;flex:none}
 .appbar{padding:var(--sp-2) var(--sp-4) var(--sp-3);display:flex;align-items:center;gap:var(--sp-3);flex:none}
@@ -78,23 +83,44 @@ textarea.input{min-height:64px;resize:none;font-family:var(--font)}
 @keyframes spin{to{transform:rotate(360deg)}}
 .toast{position:absolute;left:16px;right:16px;bottom:24px;background:#2b2b33;color:#fff;border-radius:var(--shape-md);padding:14px 16px;display:flex;align-items:center;gap:10px;font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,.3)}
 .toast svg{width:18px;height:18px;color:var(--md-success-container);flex:none}
+
+/* --- Health check: recurrence stepper (new) — deliberately plain, same weight as .input, NOT tinted like .ladder-preview --- */
+.stepper-row{display:flex;align-items:center;justify-content:space-between;background:var(--md-surface-container-low);border:1px solid var(--md-outline-variant);border-radius:var(--shape-sm);padding:6px 6px 6px 14px}
+.stepper-row .sr-label{font-size:14.5px;color:var(--md-on-surface)}
+.stepper{display:flex;align-items:center;gap:2px}
+.stepper button{width:34px;height:34px;border-radius:999px;border:none;background:var(--md-surface-container-high);color:var(--md-on-surface);font-size:17px;font-weight:600;line-height:1}
+.stepper .sv{width:70px;text-align:center;font-size:15px;font-weight:700}
+/* --- one-time inline note (new) — plain banner, NOT the tinted primary-container callout style used for the ladder preview, on purpose (see design doc §2a) --- */
+.plain-note{display:flex;gap:10px;align-items:flex-start;background:var(--md-surface-container-low);border:1px solid var(--md-outline-variant);border-radius:var(--shape-sm);padding:12px 14px;margin-top:var(--sp-3)}
+.plain-note svg{width:16px;height:16px;color:var(--md-on-surface-variant);flex:none;margin-top:2px}
+.plain-note p{font-size:12px;line-height:1.5;color:var(--md-on-surface-variant);margin:0}
+.plain-note .dismiss{margin-left:auto;flex:none;color:var(--md-on-surface-variant);font-size:11px;font-weight:700;align-self:center}
+/* --- Custom: short/medium/long segmented control (new) --- */
+.segmented{display:flex;background:var(--md-surface-container-low);border:1px solid var(--md-outline-variant);border-radius:var(--shape-full);padding:3px}
+.segmented .seg{flex:1;text-align:center;padding:9px 0;border-radius:var(--shape-full);font-size:12.5px;font-weight:700;color:var(--md-on-surface-variant)}
+.segmented .seg.active{background:var(--md-primary);color:var(--md-on-primary)}
+.segmented-caption{font-size:11px;color:var(--md-on-surface-variant);margin-top:6px}
 </style>
 </head>
 <body>
 <a class="back" href="./00-index.html">&larr; all mockups</a>
 <h1>2. Add / Edit item</h1>
-<p class="sub">Type chips at the top, plain fields below, and a live ladder preview so the user sees what they're signing up for before saving — not a separate reveal afterward.</p>
+<p class="sub">Type chips at the top, plain fields below, and a live ladder preview so the user sees what they're signing up for before saving — not a separate reveal afterward. <b>Amended:</b> type row now has all 7 types (Health check added, Warranty/Custom chips filled in); see the two new tabs for Health check's recurrence field and Custom's lead-time selector.</p>
 
 <div class="tabs">
 <input type="radio" name="st" id="s1" checked>
 <input type="radio" name="st" id="s2">
 <input type="radio" name="st" id="s3">
 <input type="radio" name="st" id="s4">
+<input type="radio" name="st" id="s5">
+<input type="radio" name="st" id="s6">
 <div class="tabbar">
   <label for="s1">Empty (blank form)</label>
   <label for="s2">Loading (saving)</label>
   <label for="s3">Error (validation)</label>
   <label for="s4">Success (saved)</label>
+  <label for="s5">Health check (new)</label>
+  <label for="s6">Custom — lead-time selector (new)</label>
 </div>
 <div class="stage">
 
@@ -114,6 +140,9 @@ textarea.input{min-height:64px;resize:none;font-family:var(--font)}
       <div class="type-chip"><div class="type-badge" style="background:var(--cat-insurance-c);color:var(--cat-insurance-on)"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div><span>Insurance</span></div>
       <div class="type-chip"><div class="type-badge" style="background:var(--cat-licence-c);color:var(--cat-licence-on)"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="5" stroke="currentColor" stroke-width="1.6"/><path d="M9 12.5L7.5 21l4.5-2.5L16.5 21 15 12.5" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></div><span>Licence</span></div>
       <div class="type-chip"><div class="type-badge" style="background:var(--cat-vehicle-c);color:var(--cat-vehicle-on)"><svg viewBox="0 0 24 24" fill="none"><path d="M4 16v-3.5l2-4.5h12l2 4.5V16" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M4 16h16v2a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H7v1a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-2z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></div><span>Vehicle</span></div>
+      <div class="type-chip"><div class="type-badge" style="background:var(--cat-warranty-c);color:var(--cat-warranty-on)"><svg viewBox="0 0 24 24" fill="none"><path d="M4 8l8-4 8 4-8 4-8-4z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M4 8v8l8 4 8-4V8" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 12v8" stroke="currentColor" stroke-width="1.6"/></svg></div><span>Warranty</span></div>
+      <div class="type-chip"><div class="type-badge" style="background:var(--cat-health-c);color:var(--cat-health-on)"><svg viewBox="0 0 24 24" fill="none"><path d="M12 20s-7-4.35-9.5-9A5.5 5.5 0 0 1 12 5.5 5.5 5.5 0 0 1 21.5 11c-2.5 4.65-9.5 9-9.5 9z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M5 12h3l1.5-3 2 5 1.5-3H19" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div><span>Health check</span></div>
+      <div class="type-chip"><div class="type-badge" style="background:var(--cat-custom-c);color:var(--cat-custom-on)"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3l2.4 5.8 6.1.5-4.7 4 1.5 6-5.3-3.5-5.3 3.5 1.5-6-4.7-4 6.1-.5L12 3z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></div><span>Custom</span></div>
     </div>
     <div class="field-label">Label</div>
     <div class="input placeholder">e.g. "Passport" or "Honda Civic MOT"</div>
@@ -215,6 +244,102 @@ textarea.input{min-height:64px;resize:none;font-family:var(--font)}
     </div>
   </div>
   <div class="toast"><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4 10-10" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Saved — reminders scheduled</div>
+</div>
+</div>
+
+<!-- HEALTH CHECK (new) -->
+<div class="panel p5">
+<div class="device">
+  <div class="statusbar"><span>9:41</span><span>●●● 5G 100%</span></div>
+  <div class="appbar">
+    <div class="icon-btn"><svg viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <h2>New renewal</h2>
+    <div class="icon-btn primary"><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4 10-10" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+  </div>
+  <div class="content">
+    <div class="field-label">Type</div>
+    <div class="type-row">
+      <div class="type-chip selected"><div class="type-badge" style="background:var(--cat-health-c);color:var(--cat-health-on)"><svg viewBox="0 0 24 24" fill="none"><path d="M12 20s-7-4.35-9.5-9A5.5 5.5 0 0 1 12 5.5 5.5 5.5 0 0 1 21.5 11c-2.5 4.65-9.5 9-9.5 9z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M5 12h3l1.5-3 2 5 1.5-3H19" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div><span>Health check</span></div>
+    </div>
+
+    <div class="plain-note">
+      <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M12 8v.01M12 11v5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <p><b style="color:var(--md-on-surface);display:block;margin-bottom:2px">Shown once, first time you pick this type</b>[placeholder — business-analyst to finalize] This isn't medical advice — screening intervals vary by person. You're setting your own reminder, same as every other type here.</p>
+      <span class="dismiss">Got it</span>
+    </div>
+
+    <div class="field-label">Label</div>
+    <div class="input">Dental checkup</div>
+    <div class="field-label">Due date</div>
+    <div class="input">14 May 2027</div>
+
+    <div class="field-label">Remind me every</div>
+    <div class="stepper-row">
+      <span class="sr-label">months</span>
+      <div class="stepper">
+        <button aria-label="decrease">−</button>
+        <span class="sv">12</span>
+        <button aria-label="increase">+</button>
+      </div>
+    </div>
+    <div class="helper">Your call — change this any time. Not a recommendation, just your own setting.</div>
+
+    <div class="field-label">Notes (optional)</div>
+    <div class="input placeholder" style="min-height:60px">Anything you want to remember — dentist name, insurance, etc.</div>
+
+    <div class="ladder-preview">
+      <div class="lp-title"><svg viewBox="0 0 24 24" fill="none"><path d="M6 10a6 6 0 1 1 12 0c0 4 1.5 5.5 1.5 5.5H4.5S6 14 6 10z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M10 18.5a2 2 0 0 0 4 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>Reminders scheduled</div>
+      <p>You'll be reminded 3 times before the due date. If it passes unmarked, one lighter check-in follows 30 days later — checkups don't need the daily-risk cadence a lapsed legal document does.</p>
+      <div class="stage-chip-row">
+        <span class="stage-chip">30 days before</span>
+        <span class="stage-chip">14 days before</span>
+        <span class="stage-chip">3 days before</span>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- CUSTOM — LEAD-TIME SELECTOR (new) -->
+<div class="panel p6">
+<div class="device">
+  <div class="statusbar"><span>9:41</span><span>●●● 5G 100%</span></div>
+  <div class="appbar">
+    <div class="icon-btn"><svg viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <h2>New renewal</h2>
+    <div class="icon-btn primary"><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4 10-10" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+  </div>
+  <div class="content">
+    <div class="field-label">Type</div>
+    <div class="type-row">
+      <div class="type-chip selected"><div class="type-badge" style="background:var(--cat-custom-c);color:var(--cat-custom-on)"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3l2.4 5.8 6.1.5-4.7 4 1.5 6-5.3-3.5-5.3 3.5 1.5-6-4.7-4 6.1-.5L12 3z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></div><span>Custom</span></div>
+    </div>
+    <div class="field-label">Label</div>
+    <div class="input">Storage unit rental</div>
+    <div class="field-label">Due date</div>
+    <div class="input">18 November 2026</div>
+
+    <div class="field-label">How much lead time do you need?</div>
+    <div class="segmented">
+      <div class="seg">Short</div>
+      <div class="seg active">Medium</div>
+      <div class="seg">Long</div>
+    </div>
+    <div class="segmented-caption">Medium is the default — 30/7/1 days before, unchanged from today. Short = 7/3/1, Long = 90/30/7.</div>
+
+    <div class="field-label">Notes (optional)</div>
+    <div class="input placeholder" style="min-height:60px">Anything you want to remember</div>
+
+    <div class="ladder-preview">
+      <div class="lp-title"><svg viewBox="0 0 24 24" fill="none"><path d="M6 10a6 6 0 1 1 12 0c0 4 1.5 5.5 1.5 5.5H4.5S6 14 6 10z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M10 18.5a2 2 0 0 0 4 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>Reminders scheduled — Medium</div>
+      <p>Updates live as you change the selector above. Free plan's single reminder scales too — it'll show the middle stage of whichever profile you pick, currently 7 days before.</p>
+      <div class="stage-chip-row">
+        <span class="stage-chip">30 days before</span>
+        <span class="stage-chip">7 days before</span>
+        <span class="stage-chip">1 day before</span>
+      </div>
+    </div>
+  </div>
 </div>
 </div>
 
