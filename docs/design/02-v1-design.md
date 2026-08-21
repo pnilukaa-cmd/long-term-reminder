@@ -1,12 +1,23 @@
 # V1 Design Direction — renewal-reminder
 
 Prepared by: ux-designer
-Date: 2026-08-20 (amended same day — see revision note)
-Inputs: `CLAUDE.md`, `docs/product/01-v1-scope.md` (amended — §8 routes five items here), `docs/research/00-problem-space.md`, this doc's own first pass
+Date: 2026-08-20 (amended 2026-08-20 and 2026-08-21 — see revision notes)
+Inputs: `CLAUDE.md`, `docs/product/01-v1-scope.md` (amended — §8 routes five items here, then two more targeted changes on 2026-08-21), `docs/research/00-problem-space.md`, this doc's own first pass
 Routed to: product-manager (react/prioritize), business-analyst (lock acceptance criteria against this), developer (implement), user (react)
 Mockups: `docs/design/mockups/*.html` — open directly in a browser, no build step, no external dependencies
 
 No shared theme/token source exists yet for this app — §7 below **is** the theme. It's inlined into every mockup's `<style>` block rather than linked, since these files are meant to be opened standalone.
+
+---
+
+## Revision note (2026-08-21, focused cleanup following product-manager decisions)
+
+Two small, targeted changes, not a redesign:
+
+1. **Snooze cut from v1.** Removed the "Snooze 2 weeks" notification action from both notification-tray mockup panels (`docs/design/mockups/07-notifications.html`, p1 and p2) and from §4's text — the notification action set is now **Mark done only**. This was never scoped, routed, or counted in §2's ≈1.12/month volume budget; it was drawn into the mockups as though already locked, which it wasn't. Full reasoning, and a note on how this slipped past me (my own suggested-enhancements table treated a *refinement* to Snooze as optional while the base capability was drawn as settled — that inconsistency is what should have caught it earlier), is in §4 and §4a.
+2. **Delete affordance drawn.** Two new mockup states, previously undrawn anywhere despite being committed to in scope doc §3c: long-press-revealed delete on a list card (`01-home-list.html`, new tab) and the expanded overflow (⋮) menu showing `Delete` on item detail (`03-item-detail.html`, new tab). Both feed the existing undo toast (§4a). New §4b covers the design and the rejected persistent-icon alternative.
+
+I did a full pass over this doc and all seven mockups specifically looking for other drawn-but-never-scoped material after finding the Snooze issue — nothing else turned up; see the note at the end of §4a.
 
 ---
 
@@ -45,7 +56,7 @@ Warranty is unchanged — product-manager kept it, no action needed on my end. E
 7. **Settings / Privacy** — mostly static: privacy disclosure (local-only, nothing leaves the device — worth stating even though it's table stakes per research, users still expect to see it), notification settings deep-link, restore purchase, about/version. The disclaimer text here is now the broadened legal+medical version — see §5's update.
 8. **Notification tray previews (new, `docs/design/mockups/07-notifications.html`)** — not an in-app screen; a mock of what actually lands in the Android notification shade. Covers: a single ladder-stage notification, a single overdue nag, the **grouped/summary notification** (new, P0) when two or more items collapse onto one calendar day, and its expanded state. See §6a.
 
-Two existing screens gained new states rather than new files: Add/Edit (`02-add-edit-item.html`) now has a Health check tab and a Custom-with-selector tab; Item detail (`03-item-detail.html`) now has a Health check tab and the mark-done recurrence bottom sheet (both the generic version and the Health check "same as your setting" version), plus an undo-toast state. Home/List (`01-home-list.html`) gained a 7th empty-state tile, a Health check and a Custom card in the success state, and an undo-toast state.
+Two existing screens gained new states rather than new files: Add/Edit (`02-add-edit-item.html`) now has a Health check tab and a Custom-with-selector tab; Item detail (`03-item-detail.html`) now has a Health check tab, the mark-done recurrence bottom sheet (both the generic version and the Health check "same as your setting" version), an undo-toast state, and (new 2026-08-21) the expanded overflow (⋮) menu showing `Delete` — see §4b. Home/List (`01-home-list.html`) gained a 7th empty-state tile, a Health check and a Custom card in the success state, an undo-toast state, and (new 2026-08-21) the long-press-revealed delete affordance on a card — see §4b.
 
 ### 1a. First-run empty state — treated as a primary design problem
 
@@ -165,8 +176,10 @@ Two levels, deliberately different in density:
 ## 4. Mark-as-done and follow-through tone (routed question 4)
 
 - **From the list:** a quick action on the card (tap a "Mark done" affordance, no swipe-only gesture — swipe-to-dismiss is easy to trigger accidentally on a screen full of stacked cards, and this data doesn't have cloud undo). For types that typically recur (insurance, vehicle, licence, and passport at a longer horizon), marking done opens a small bottom sheet: "Nice — when's the next one due?" with a one-tap smart default ("Same time next year" / "+10 years" for passport) plus a manual date picker. Warranty skips the recur prompt (nothing to renew); Custom asks a yes/no "does this repeat?" first, since we don't know its cadence. **Health check (new) uses the same bottom sheet, but the one-tap default reads "Same as your setting — In 12 months," pulling from the item's own stored interval, never a freshly computed suggestion** — this is the mechanical enforcement of §2a's constraint at the one other moment (besides the field itself) where the interval resurfaces. See the mockup's bottom-sheet state on item detail.
-- **From a notification:** the expanded notification carries two actions, **Mark done** and **Snooze 2 weeks**, so most resolutions never require opening the app. Tapping "Mark done" from a notification clears the current cycle and cancels remaining ladder stages immediately; the recurrence question ("when's the next one due?") is deferred to a small inline banner on the item's detail screen the next time the app is opened — **not** a follow-up push notification. Firing a second notification to ask about the first one is exactly the kind of self-inflicted fatigue the research warns about. Per scope doc §3c, notification-triggered mark-done does **not** get an undo toast (no foreground UI surface exists at that moment) — status can always be manually reverted from item detail regardless.
-- **Tone:** overdue notifications never use blame language ("you forgot," "you failed to..."). Copy stays collaborative and matter-of-fact: *"Insurance renewal — still open"* / *"Still need to sort this?"* with **Mark done** / **Snooze** actions, not a bare dismiss. The visual treatment leans on the existing error/overdue color to carry urgency rather than stacking urgent copy on top of urgent color — see status language in §6.
+- **From a notification:** the expanded notification carries a single action, **Mark done** — no Snooze in v1 (cut 2026-08-21, see note below), so most resolutions never require opening the app. Tapping "Mark done" from a notification clears the current cycle and cancels remaining ladder stages immediately; the recurrence question ("when's the next one due?") is deferred to a small inline banner on the item's detail screen the next time the app is opened — **not** a follow-up push notification. Firing a second notification to ask about the first one is exactly the kind of self-inflicted fatigue the research warns about. Per scope doc §3c, notification-triggered mark-done does **not** get an undo toast (no foreground UI surface exists at that moment) — status can always be manually reverted from item detail regardless.
+- **Tone:** overdue notifications never use blame language ("you forgot," "you failed to..."). Copy stays collaborative and matter-of-fact: *"Insurance renewal — still open"* / *"Still need to sort this?"* with a single **Mark done** action, not a bare dismiss. The visual treatment leans on the existing error/overdue color to carry urgency rather than stacking urgent copy on top of urgent color — see status language in §6. If a user isn't ready to act, the correct response is simply to leave the notification — it isn't lost: the item stays on the list at its correct status, and the ladder/overdue cadence (§2) already re-touches them later without a second scheduling mechanism.
+
+**Revision note (2026-08-21) — Snooze cut from v1:** earlier drafts of this doc and of `docs/design/mockups/07-notifications.html` (panels p1, p2) drew a second notification action, **"Snooze 2 weeks,"** on every notification. product-manager cut it from v1: it was never in the P0 list, never routed to me, and — critically — never counted in the ≈1.12/month notification-volume budget in §2, which every other notification-generating decision in this doc is built to protect. It's removed from both notification-tray panels and from the bullets above. **How this slipped through, for the record:** my own suggested-enhancements table (bottom of this doc) listed "Snooze duration picker (not fixed 2 weeks)" as a low-impact P2-feeling refinement, while the base Snooze capability itself was drawn into the mockups as though already locked — treating a refinement to something as optional while the thing itself was undrawn scope creep is an inconsistency I should have caught. I did a pass over the rest of this doc and the mockups specifically looking for anything else drawn-as-settled that was never actually scoped or routed — nothing else surfaced (see the note at the end of §4a below).
 
 ---
 
@@ -177,6 +190,22 @@ Covers delete and mark-done, in-app only (list quick-action or item detail), 6-s
 **Visual treatment:** reuses the dark snackbar component already established in the Add/Edit "Saved" confirmation (`docs/design/mockups/02-add-edit-item.html`, success state) rather than inventing a second toast style — same dark surface (`#2b2b33`), same pill shape, same left-icon-plus-text layout. The only addition is a right-aligned **UNDO** action in the primary-container color (so it reads as tappable and distinct from the message text), consistent with standard Material snackbar conventions. Copy is plain and specific, not generic: *"Deleted — Car insurance"* / *"Marked done — MOT, Honda Civic"*, each with an **UNDO** action, so a user managing several toasts in a row (e.g., clearing a backlog of overdue items) can tell at a glance which item each toast refers to without it reading as an error state — deliberately not using the error/warning color roles here, since undo is a safety net, not a problem.
 
 **Placement relative to the FAB (there's no bottom nav — see §1's nav model, so this is a simpler problem than it would be with tab chrome to clear):** the toast sits full-width at the bottom of the content area, and the FAB elevates to sit directly above it for the toast's duration, rather than the toast rendering underneath/behind the FAB or the FAB staying put and getting overlapped. This is standard `CoordinatorLayout`-equivalent behavior on Android (a snackbar anchored to a FAB pushes it up automatically) and costs nothing extra to implement idiomatically. On item detail, where there's no FAB but there is the bottom action bar (Edit / Mark as done), the toast sits above that bar on the same principle — never covering an actionable button. See the new undo-toast states in `01-home-list.html` and `03-item-detail.html`.
+
+**Check for other undrawn-but-assumed scope (2026-08-21):** prompted by the Snooze miss above, I re-read this doc end to end plus all seven mockup files looking specifically for anything else presented as a finished, locked visual when it was actually still an open question or an unrouted addition. Nothing else surfaced. The two remaining open items in this doc (the Health check category tint, §2a/§6/open-questions; the free-tier reminder-timing table, §5/open-questions) are already explicitly flagged as open rather than drawn-as-settled, which is the behavior I want — so I'm treating this as a one-off process gap on Snooze specifically, not a pattern across the doc.
+
+---
+
+### 4b. Delete affordance: long-press (list) + overflow menu (detail) — new, confirmed 2026-08-21
+
+Neither state existed in any mockup before this revision, despite scope doc §3c already committing to delete being reachable "from list quick-action or item detail." business-analyst's default — long-press on a list card, item-detail delete behind the existing overflow (⋮) menu — was confirmed by product-manager on 2026-08-21. Both feed the existing undo toast (§4a); neither adds a confirmation dialog on top of it (redundant friction over a safety net that already exists).
+
+**List — long-press reveals delete:** holding a card elevates it (2px primary-colored border, raised shadow, a small "Held" tag) and swaps its single quick-done checkmark for a two-button column — quick-done (unchanged) stacked above a new quick-delete action in the error-container tint. Other cards on screen dim to ~40% opacity, the standard Android cue that the list has entered a contextual-selection state and that the held card is the one an action will apply to. This is the same accidental-trigger reasoning §3 already used to reject swipe-to-delete on this exact card (a screen full of stacked cards makes a single persistent swipe/icon target for a destructive action too easy to trigger by accident) — long-press requires a deliberate, sustained gesture, and it keeps the card's resting state exactly as drawn everywhere else in this doc (one visible action, mark-done), rather than adding a second permanent icon to every row. See the new tab in `docs/design/mockups/01-home-list.html`.
+
+**Item detail — overflow (⋮) menu:** tapping the existing three-dot icon (drawn on every item-detail panel already, previously non-interactive in the mockups) opens a small popover anchored under it with a single **Delete** entry in the error color, over a light scrim. Kept deliberately minimal — one entry, not a menu shell built out for hypothetical future items (duplicate, share, etc.) that aren't in scope — so it reads as "the destructive action lives here" without implying more menu structure than actually exists. See the new tab in `docs/design/mockups/03-item-detail.html`.
+
+**Discoverability — flagged, not designed against:** long-press is a well-established Android pattern (this app already uses no other primary gesture that would collide with it — cards aren't otherwise draggable or expandable by touch), but it is inherently less discoverable than a visible icon for a first-time user. Per the scope doc's own allowance, a lightweight one-time hint (e.g., a brief coach-mark the first time a card is rendered, "Long-press a card to delete it") is acceptable low-cost P2 polish if user testing shows people don't find it — not a v1 blocker, and not a reason to add a persistent per-row icon instead. Not designed or mocked here; flagging it so it isn't silently forgotten as a possible follow-up.
+
+**Rejected alternative — a persistent trailing delete icon on every card** (mirroring the always-visible quick-done checkmark). Rejected because it clutters the card's resting state for an action every row would rarely use, and reintroduces exactly the "easy to hit by accident on a stacked list" risk that ruled out swipe-to-delete in the first place — a checkmark is a low-consequence, reversible-by-re-tapping action; a delete icon in the same visual weight class is not, and shouldn't invite the same casual tap.
 
 ---
 
@@ -296,14 +325,14 @@ Exact values are in the `:root` block at the top of each mockup file — identic
 
 ## Suggested enhancements (beyond what was asked — for triage, not commitments)
 
-Two items from the previous pass's table are now in scope (undo toast, Custom selector) and have been removed from this list accordingly — they're specified above, not pending triage anymore.
+Two items from the previous pass's table are now in scope (undo toast, Custom selector) and have been removed from this list accordingly — they're specified above, not pending triage anymore. **(Revision 2026-08-21)** "Snooze duration picker (not fixed 2 weeks)" is also removed from this table — Snooze itself was cut from v1 (§4), so a refinement of it isn't a meaningful suggestion right now. If Snooze is ever revisited per-usage-data as a P1 candidate (scope doc §7), a duration picker would be a reasonable follow-on suggestion at that time, not before.
 
 | Idea | Why | Impact |
 |---|---|---|
 | Tap-to-explain on the ladder track ("Based on typical passport processing time") | Builds trust in the ladder's timing specifically where research couldn't fully validate the numbers — directly supports the paid pitch | Medium |
 | Home-screen summary line for paid users ("6 items · full ladder active") | Cheap, ongoing reminder of what was purchased, without another notification | Low–Medium |
-| Snooze duration picker (not fixed 2 weeks) | More flexible, but real added complexity for a P2-feeling need | Low |
-| **(New this revision)** A visible, persistent "N items overdue" count somewhere in the app icon/list header, distinct from any individual notification | If the team ever revisits the staggered-overdue-week gap noted in §2/§6a, an in-app aggregate view is a cheaper lever than more notification-side engineering — it moves the "catch up" moment into the app instead of the tray | Low, speculative — only worth it if the staggered-week gap turns out to matter in practice |
+| A visible, persistent "N items overdue" count somewhere in the app icon/list header, distinct from any individual notification | If the team ever revisits the staggered-overdue-week gap noted in §2/§6a, an in-app aggregate view is a cheaper lever than more notification-side engineering — it moves the "catch up" moment into the app instead of the tray | Low, speculative — only worth it if the staggered-week gap turns out to matter in practice |
+| **(New 2026-08-21)** A one-time coach-mark hint for long-press-to-delete, shown the first time a card renders | Long-press is a well-established Android pattern but is inherently less discoverable than a visible icon; a first-use hint is the cheap mitigation if testing shows people don't find it (see §4b) — not designed here, flagged for triage | Low |
 
 ---
 
@@ -311,11 +340,11 @@ Two items from the previous pass's table are now in scope (undo toast, Custom se
 
 | Screen | Loading | Empty | Error | Success |
 |---|---|---|---|---|
-| Home/List | ✓ skeleton | ✓ first-run type-picker (now 7 tiles) | ✓ read-failure retry | ✓ grouped by status, + ✓ undo-toast (delete/mark-done) |
+| Home/List | ✓ skeleton | ✓ first-run type-picker (now 7 tiles) | ✓ read-failure retry | ✓ grouped by status, + ✓ undo-toast (delete/mark-done), + ✓ long-press delete revealed (new 2026-08-21) |
 | Add/Edit | ✓ saving spinner | ✓ blank form | ✓ validation error | ✓ saved confirmation, + ✓ Health check selected (recurrence field + one-time note), + ✓ Custom with lead-time selector |
-| Item detail | ✓ skeleton | n/a (always has data) | ✓ not found | ✓ free-tier + ✓ paid-tier + ✓ Health check + ✓ mark-done recurrence bottom sheet + ✓ undo-toast |
+| Item detail | ✓ skeleton | n/a (always has data) | ✓ not found | ✓ free-tier + ✓ paid-tier + ✓ Health check + ✓ mark-done recurrence bottom sheet + ✓ undo-toast + ✓ overflow (⋮) menu — Delete (new 2026-08-21) |
 | Paywall | ✓ billing check | n/a | ✓ purchase failed | ✓ purchased |
 | Notification permission | n/a (instant) | n/a | ✓ denied-recovery | ✓ granted |
 | Exact-alarm (conditional) | n/a | n/a | ✓ denied-recovery | ✓ granted |
 | Settings/Privacy | ✓ | n/a (static) | ✓ load failure | ✓ populated (broadened legal+medical disclaimer) |
-| Notification tray (new, `07-notifications.html`) | n/a | n/a | n/a | ✓ single stage, ✓ single overdue nag, ✓ grouped/collapsed, ✓ grouped/expanded |
+| Notification tray (new, `07-notifications.html`) | n/a | n/a | n/a | ✓ single stage (Mark done only, no Snooze), ✓ single overdue nag (Mark done only), ✓ grouped/collapsed, ✓ grouped/expanded |

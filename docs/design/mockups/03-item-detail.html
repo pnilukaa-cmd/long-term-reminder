@@ -40,13 +40,15 @@ a.back{color:var(--md-primary);font-size:13px;text-decoration:none}
 #s5:checked ~ .stage .p5{display:block}
 #s6:checked ~ .stage .p6{display:block}
 #s7:checked ~ .stage .p7{display:block}
+#s8:checked ~ .stage .p8{display:block}
 #s1:checked ~ .tabbar label[for=s1],
 #s2:checked ~ .tabbar label[for=s2],
 #s3:checked ~ .tabbar label[for=s3],
 #s4:checked ~ .tabbar label[for=s4],
 #s5:checked ~ .tabbar label[for=s5],
 #s6:checked ~ .tabbar label[for=s6],
-#s7:checked ~ .tabbar label[for=s7]{background:var(--md-primary);color:var(--md-on-primary);border-color:var(--md-primary)}
+#s7:checked ~ .tabbar label[for=s7],
+#s8:checked ~ .tabbar label[for=s8]{background:var(--md-primary);color:var(--md-on-primary);border-color:var(--md-primary)}
 .device{width:390px;height:790px;background:var(--md-surface);border-radius:36px;box-shadow:0 12px 40px rgba(20,20,40,.18);overflow:hidden;display:flex;flex-direction:column;border:8px solid #1c1c1e;position:relative}
 .statusbar{height:28px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;font-size:12px;font-weight:600;flex:none}
 .appbar{padding:var(--sp-2) var(--sp-4) var(--sp-2);display:flex;align-items:center;gap:var(--sp-3);flex:none}
@@ -126,12 +128,20 @@ a.back{color:var(--md-primary);font-size:13px;text-decoration:none}
 .sheet-option .so-txt b{display:block;font-size:13.5px;font-weight:700}
 .sheet-option .so-txt span{font-size:11.5px;color:var(--md-on-surface-variant)}
 .sheet-option.primary .so-txt span{color:var(--md-on-primary-container);opacity:.85}
+
+/* --- overflow (⋮) menu, expanded — Delete entry (new, confirmed 2026-08-21) --- */
+.menu-scrim{position:absolute;inset:0;background:rgba(15,15,20,.25);z-index:4}
+.menu-popover{position:absolute;top:56px;right:14px;background:var(--md-surface-container-lowest);border-radius:var(--shape-md);box-shadow:0 8px 28px rgba(0,0,0,.22);min-width:168px;padding:6px;z-index:5}
+.menu-item{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:var(--shape-sm);font-size:13.5px;font-weight:600;color:var(--md-on-surface)}
+.menu-item svg{width:17px;height:17px;flex:none}
+.menu-item.danger{color:var(--md-error)}
+.menu-item.active{background:var(--md-surface-container-high)}
 </style>
 </head>
 <body>
 <a class="back" href="./00-index.html">&larr; all mockups</a>
 <h1>3. Item detail</h1>
-<p class="sub">The ladder track is the core differentiator, surfaced at the moment it matters most. Free-tier variant shows the exact same track with the extra stages rendered as locked markers in position, so the paid difference is legible without a separate ad screen (routed q.3 and q.5). <b>Amended:</b> new tabs add the Health check variant, the mark-done recurrence bottom sheet (both generic and Health-check-specific defaults), and the undo toast.</p>
+<p class="sub">The ladder track is the core differentiator, surfaced at the moment it matters most. Free-tier variant shows the exact same track with the extra stages rendered as locked markers in position, so the paid difference is legible without a separate ad screen (routed q.3 and q.5). <b>Amended:</b> new tabs add the Health check variant, the mark-done recurrence bottom sheet (both generic and Health-check-specific defaults), the undo toast, and the expanded overflow (⋮) menu showing Delete (confirmed 2026-08-21 — no separate confirmation dialog, the undo toast is the safety net).</p>
 
 <div class="tabs">
 <input type="radio" name="st" id="s1">
@@ -141,6 +151,7 @@ a.back{color:var(--md-primary);font-size:13px;text-decoration:none}
 <input type="radio" name="st" id="s5">
 <input type="radio" name="st" id="s6">
 <input type="radio" name="st" id="s7">
+<input type="radio" name="st" id="s8">
 <div class="tabbar">
   <label for="s1">Loading</label>
   <label for="s2">Error (not found)</label>
@@ -149,6 +160,7 @@ a.back{color:var(--md-primary);font-size:13px;text-decoration:none}
   <label for="s5">Success — Health check (new)</label>
   <label for="s6">Mark-done bottom sheet (new)</label>
   <label for="s7">Undo toast (new)</label>
+  <label for="s8">Overflow menu — Delete (new)</label>
 </div>
 <div class="stage">
 
@@ -362,6 +374,49 @@ a.back{color:var(--md-primary);font-size:13px;text-decoration:none}
   <div class="toast"><div class="msg">Marked done — <b>Passport</b>. Tap Undo within 6s to revert.</div><button class="undo-btn">UNDO</button></div>
   <div class="bottom-bar">
     <div class="btn btn-outlined" style="flex:none;padding:13px 22px"><svg viewBox="0 0 24 24" fill="none"><path d="M4 20l1.2-4.2L15.8 5.2a1.7 1.7 0 0 1 2.4 0l.6.6a1.7 1.7 0 0 1 0 2.4L8.2 18.8 4 20z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>Edit</div>
+  </div>
+</div>
+</div>
+
+<!-- OVERFLOW (⋮) MENU EXPANDED — DELETE ENTRY (new, confirmed 2026-08-21) -->
+<div class="panel p8">
+<div class="device">
+  <div class="statusbar"><span>9:41</span><span>●●● 5G 100%</span></div>
+  <div class="appbar"><div class="icon-btn"><svg viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><h2>PASSPORT / TRAVEL ID</h2><div class="icon-btn" style="background:var(--md-surface-container-highest)"><svg viewBox="0 0 24 24" fill="none"><circle cx="5" cy="12" r="1.4" fill="currentColor"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/><circle cx="19" cy="12" r="1.4" fill="currentColor"/></svg></div></div>
+  <div class="content">
+    <div class="hero">
+      <div class="type-badge" style="background:var(--cat-passport-c);color:var(--cat-passport-on)"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="3" width="16" height="18" rx="2" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="10" r="3" stroke="currentColor" stroke-width="1.4"/><path d="M8 17h8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></div>
+      <div>
+        <h3>Passport</h3>
+        <div class="due-line">Due 12 Dec 2026 · in 4 months</div>
+        <div class="status-pill upcoming"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.8"/><path d="M12 7.5V12l3 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Upcoming</div>
+      </div>
+    </div>
+    <div class="card">
+      <h4>Your reminder ladder</h4>
+      <p class="desc">Full 4-stage ladder — starts early enough that processing time isn't a surprise.</p>
+      <div class="track">
+        <div class="t-item"><div class="t-dot fired"><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4 10-10" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="t-label">6mo</div><div class="t-date">Jun 12</div></div>
+        <div class="t-item today"><div class="t-dot today"></div><div class="t-label">Today</div><div class="t-date">Aug 20</div></div>
+        <div class="t-item"><div class="t-dot next"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.8"/><path d="M12 7.5V12l3 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div><div class="t-label">3mo</div><div class="t-date">Sep 12</div></div>
+        <div class="t-item"><div class="t-dot"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.8"/><path d="M12 7.5V12l3 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div><div class="t-label">1mo</div><div class="t-date">Nov 12</div></div>
+        <div class="t-item"><div class="t-dot"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.8"/><path d="M12 7.5V12l3 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div><div class="t-label">1wk</div><div class="t-date">Dec 5</div></div>
+        <div class="t-item"><div class="t-dot due"><svg viewBox="0 0 24 24" fill="none"><path d="M6 3v18M6 4h11l-2.5 3L17 10H6" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></div><div class="t-label">Due</div><div class="t-date">Dec 12</div></div>
+      </div>
+      <div class="active-note"><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4 10-10" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Full ladder active — plus overdue follow-through if this passes unmarked</div>
+    </div>
+    <div class="card">
+      <h4>Notes</h4>
+      <div class="notes-body">Renew online — last one took 6 weeks during the summer backlog.</div>
+    </div>
+  </div>
+  <div class="menu-scrim"></div>
+  <div class="menu-popover">
+    <div class="menu-item danger"><svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0-.7 12.1a2 2 0 0 1-2 1.9H8.7a2 2 0 0 1-2-1.9L6 7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>Delete</div>
+  </div>
+  <div class="bottom-bar">
+    <div class="btn btn-outlined"><svg viewBox="0 0 24 24" fill="none"><path d="M4 20l1.2-4.2L15.8 5.2a1.7 1.7 0 0 1 2.4 0l.6.6a1.7 1.7 0 0 1 0 2.4L8.2 18.8 4 20z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>Edit</div>
+    <div class="btn btn-filled"><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4 10-10" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Mark as done</div>
   </div>
 </div>
 </div>

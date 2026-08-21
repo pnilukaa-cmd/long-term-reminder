@@ -32,9 +32,14 @@ Nine agents, copied verbatim from the template. Their `.md` files are the source
 
 ## Stack
 
-**Not yet decided.** The `developer` agent owns this section and should fill it in as soon as a first technical decision is made — framework, language, state management, local storage, toolchain, CI.
+**Decided (2026-08-21) — see `docs/technical/04-scheduling-and-stack.md` for the full reasoning, citations, and device-verification checklist.**
 
-Prior research (from the session that produced this project) points toward Flutter, local-only storage, local notifications rather than push, and RevenueCat for a one-time unlock — but none of that is a decision yet, and `developer` should confirm or overturn it rather than inherit it uncritically.
+- **Framework:** Flutter, confirmed (not overturned) against the prior research default.
+- **Scheduling:** no exact alarms — inexact `AlarmManager` (`flutter_local_notifications`, `AndroidScheduleMode.inexactAllowWhileIdle`) plus a self-healing reconciliation pass (on app launch, and via a `workmanager` periodic background task) that recomputes and re-arms/cancels notifications from the local database, rather than trusting any single scheduling call to survive reboot/update/force-stop. `05-permissions.html`'s exact-alarm screens (p4–p6) are cut from the build.
+- **Local storage:** `drift` (type-safe SQL over `sqflite`).
+- **Billing:** direct Play Billing via Flutter's official `in_app_purchase` plugin — **this overturns** the prior RevenueCat default; single one-time non-consumable SKU, Android-only in v1, doesn't need RevenueCat's cross-platform/subscription complexity. Revisit if an iOS port ever happens.
+- **Notification permission:** still required (Android 13+ runtime permission), unchanged from known constraints.
+- One real residual risk that's architectural, not solvable by code: a force-stopped app has all pending alarms/background work cancelled by Android's own design until the user manually reopens it. Self-heal-on-launch repairs this the moment the app is reopened, but there's no way to prevent the gap if the app stays force-stopped through a due date. This needs to be named in Settings/help copy, not silently assumed away.
 
 ## Known constraints carried in from research
 

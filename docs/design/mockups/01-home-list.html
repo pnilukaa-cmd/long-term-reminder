@@ -40,11 +40,13 @@ a.back{color:var(--md-primary);font-size:13px;text-decoration:none}
 #s3:checked ~ .stage .p3{display:block}
 #s4:checked ~ .stage .p4{display:block}
 #s5:checked ~ .stage .p5{display:block}
+#s6:checked ~ .stage .p6{display:block}
 #s1:checked ~ .tabbar label[for=s1],
 #s2:checked ~ .tabbar label[for=s2],
 #s3:checked ~ .tabbar label[for=s3],
 #s4:checked ~ .tabbar label[for=s4],
-#s5:checked ~ .tabbar label[for=s5]{background:var(--md-primary);color:var(--md-on-primary);border-color:var(--md-primary)}
+#s5:checked ~ .tabbar label[for=s5],
+#s6:checked ~ .tabbar label[for=s6]{background:var(--md-primary);color:var(--md-on-primary);border-color:var(--md-primary)}
 
 /* --- device frame --- */
 .device{width:390px;height:790px;background:var(--md-surface);border-radius:36px;box-shadow:0 12px 40px rgba(20,20,40,.18);overflow:hidden;display:flex;flex-direction:column;border:8px solid #1c1c1e}
@@ -119,12 +121,20 @@ a.back{color:var(--md-primary);font-size:13px;text-decoration:none}
 .toast .msg{flex:1;line-height:1.35}
 .toast .undo-btn{background:none;border:none;color:var(--md-primary-container);font-weight:700;font-size:13px;letter-spacing:.3px;padding:8px 12px;flex:none}
 .fab.raised{bottom:172px}
+
+/* --- long-press delete affordance (new, confirmed 2026-08-21) --- */
+.card.revealed{border:2px solid var(--md-primary);box-shadow:0 6px 20px rgba(66,86,229,.28);position:relative}
+.card-actions{margin-left:auto;flex:none;display:flex;flex-direction:column;gap:8px;align-items:center}
+.quick-delete{width:32px;height:32px;border-radius:999px;background:var(--md-error-container);color:var(--md-on-error-container);display:flex;align-items:center;justify-content:center}
+.quick-delete svg{width:15px;height:15px}
+.longpress-tag{position:absolute;top:-11px;right:12px;background:var(--md-primary);color:var(--md-on-primary);font-size:10px;font-weight:700;padding:3px 9px;border-radius:var(--shape-full)}
+.chip-note{display:inline-block;background:var(--md-warning-container);color:var(--md-on-warning-container);font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:var(--shape-full);margin:0 0 10px}
 </style>
 </head>
 <body>
 <a class="back" href="./00-index.html">&larr; all mockups</a>
 <h1>1. Home / List</h1>
-<p class="sub">The hub. Every other screen is reached from here. Status grouping: Overdue, Due soon, Upcoming, then a collapsed Done section — so a long history of completed renewals never buries what still needs attention. <b>Amended:</b> empty state now offers 7 types (Health check added), and quick-actions on the success state can trigger the new undo toast — see the last tab.</p>
+<p class="sub">The hub. Every other screen is reached from here. Status grouping: Overdue, Due soon, Upcoming, then a collapsed Done section — so a long history of completed renewals never buries what still needs attention. <b>Amended:</b> empty state now offers 7 types (Health check added), quick-actions on the success state can trigger the new undo toast, and long-pressing a card reveals Delete (confirmed 2026-08-21 — no persistent per-row icon, same accidental-trigger reasoning design doc §4 already used to reject swipe-to-delete on this card) — see the last two tabs.</p>
 
 <div class="tabs">
 <input type="radio" name="st" id="s1" checked>
@@ -132,12 +142,14 @@ a.back{color:var(--md-primary);font-size:13px;text-decoration:none}
 <input type="radio" name="st" id="s3">
 <input type="radio" name="st" id="s4">
 <input type="radio" name="st" id="s5">
+<input type="radio" name="st" id="s6">
 <div class="tabbar">
   <label for="s1">Loading</label>
   <label for="s2">Empty (first run)</label>
   <label for="s3">Error</label>
   <label for="s4">Success (populated)</label>
   <label for="s5">Success — undo toast (new)</label>
+  <label for="s6">Long-press — delete revealed (new)</label>
 </div>
 <div class="stage">
 
@@ -356,6 +368,67 @@ a.back{color:var(--md-primary);font-size:13px;text-decoration:none}
   </div>
   <div class="fab raised"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></div>
   <div class="toast"><div class="msg">Deleted — <b>Car insurance</b></div><button class="undo-btn">UNDO</button></div>
+</div></div>
+</div>
+
+<!-- LONG-PRESS — DELETE AFFORDANCE REVEALED (new, confirmed 2026-08-21) -->
+<div class="panel p6">
+<div class="device"><div class="device-inner">
+  <div class="statusbar"><span>9:41</span><span>●●● 5G 100%</span></div>
+  <div class="appbar"><h2>Your renewals</h2><div class="icon-btn"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3.2" stroke="currentColor" stroke-width="2"/><path d="M12 3v2.4M12 18.6V21M21 12h-2.4M5.4 12H3M18.4 5.6l-1.7 1.7M7.3 16.7l-1.7 1.7M18.4 18.4l-1.7-1.7M7.3 7.3L5.6 5.6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div></div>
+  <div class="content">
+    <span class="chip-note">Long-press reveals Delete — confirmed 2026-08-21</span>
+
+    <div class="section-label">Overdue</div>
+    <div class="card" style="opacity:.4">
+      <div class="type-badge" style="background:var(--cat-insurance-c);color:var(--cat-insurance-on)"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="card-body">
+        <div class="card-title">Car insurance</div>
+        <div class="card-sub">Was due 6 days ago</div>
+        <div class="row">
+          <div class="status-dot overdue"><svg viewBox="0 0 24 24" fill="none"><path d="M12 7v6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><circle cx="12" cy="17" r="1.3" fill="currentColor"/></svg></div>
+          <span class="chip err">Overdue</span>
+        </div>
+      </div>
+      <div class="quick-done"><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4 10-10" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    </div>
+
+    <div class="section-label">Due soon</div>
+    <div class="card revealed">
+      <span class="longpress-tag">Held</span>
+      <div class="type-badge" style="background:var(--cat-vehicle-c);color:var(--cat-vehicle-on)"><svg viewBox="0 0 24 24" fill="none"><path d="M4 16v-3.5l2-4.5h12l2 4.5V16" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M4 16h16v2a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H7v1a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-2z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="8" cy="16" r="1.1" fill="currentColor"/><circle cx="16" cy="16" r="1.1" fill="currentColor"/></svg></div>
+      <div class="card-body">
+        <div class="card-title">MOT — Honda Civic</div>
+        <div class="card-sub">Due in 12 days · Jul 2</div>
+        <div class="row">
+          <div class="status-dot duesoon"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.8"/><path d="M12 7.5V12l3 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+          <span class="chip warn">Next: 3 days before</span>
+        </div>
+        <div class="stage-dots"><i class="fired"></i><i class="fired"></i><i></i></div>
+      </div>
+      <div class="card-actions">
+        <div class="quick-done"><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4 10-10" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="quick-delete"><svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0-.7 12.1a2 2 0 0 1-2 1.9H8.7a2 2 0 0 1-2-1.9L6 7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      </div>
+    </div>
+
+    <div class="section-label">Upcoming</div>
+    <div class="card" style="opacity:.4">
+      <div class="type-badge" style="background:var(--cat-passport-c);color:var(--cat-passport-on)"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="3" width="16" height="18" rx="2" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="10" r="3" stroke="currentColor" stroke-width="1.4"/><path d="M8 17h8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></div>
+      <div class="card-body">
+        <div class="card-title">Passport</div>
+        <div class="card-sub">Due in 4 months · Dec 2026</div>
+        <div class="row">
+          <div class="status-dot upcoming"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.8"/><path d="M12 7.5V12l3 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+          <span class="chip">Next: 3 months before</span>
+        </div>
+        <div class="stage-dots"><i class="fired"></i><i></i><i></i><i></i></div>
+      </div>
+      <div class="quick-done"><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4 10-10" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    </div>
+
+  </div>
+  <div class="fab"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></div>
 </div></div>
 </div>
 
