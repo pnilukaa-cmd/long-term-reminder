@@ -74,6 +74,46 @@ Other scattered `[BA DEFAULT]` items not named above (e.g., label-validation cop
 
 ---
 
+## Revision note (2026-08-21, product-manager resolves developer's flagged recurrence-lifecycle question)
+
+developer flagged an open product question while scoping the self-healing reconciliation pass (`docs/technical/04-scheduling-and-stack.md` §2): when a recurring item is marked done, its due date advances to the next cycle, but nothing in this doc or the acceptance criteria said what happens to that item's `Done` status as the new due date approaches, or whether the ladder even keeps firing for it. Resolved below. **These are locked decisions**, routed onward at the end of this note.
+
+### Decision — Done is scoped to a completed cycle, not the item. No auto-resume trigger, because nothing is ever parked in a state that needs resuming.
+
+Rejected the "auto-resume" framing as originally posed (a `Done` item silently flips back to `Upcoming` when its ladder's first stage is reached) in favor of something simpler and more correct: **`Done` should never be a persistent, sticky status for a recurring item in the first place.**
+
+- The moment a recurrence choice resolves and the item's due date advances to the next cycle (immediately after the mark-done bottom sheet is dismissed, or after the 6-second undo window lapses if there's no bottom sheet — same trigger point already defined for the undo toast, REQ-10.2), **the item's status recomputes using the exact same due-date-driven rule already in REQ-4.2** (Overdue / Due soon / Upcoming), with no special case. A freshly-cycled passport due in 10 years is status `Upcoming`, indistinguishable from a brand-new item entered with a 10-year-out due date — because that's what it now is.
+- This means there is no dormant "Done-but-secretly-has-a-future-date" state to design an escape hatch for. The bug developer surfaced — "the item stays Done indefinitely and nothing brings it back" — is fixed by not putting it there in the first place, not by adding a trigger that pulls it back out later.
+- `Done` remains a real, persistent, terminal status **only** for items with no next cycle: Warranty (never prompts for recurrence, REQ-9.3) and Custom items where the user answers "No" to "does this repeat?" (REQ-9.4). For these, there genuinely is nothing further to track, and `Done` correctly means "finished, forever, until deleted" — this part of REQ-9.3/9.4 is unchanged.
+- The self-healing reconciliation pass (`04-scheduling-and-stack.md` §2) already recomputes "what notifications should be pending" from each item's current due date on every launch and periodic pass — it was never actually written to special-case `Done` as a scheduling-suppression flag. This decision confirms that's correct behavior and closes the gap explicitly, rather than developer having to guess whether `Done` should block scheduling.
+
+**Why this is also the more honest reading of §6's existing notification-volume math, not just a cleaner model:** §6's steady-state table already computes "avg/month" assuming *indefinite* recurrence — e.g., Insurance's "12 mo cycle → 0.25/month" only holds if the ladder keeps firing every single cycle forever, not just the first one. If `Done` had actually frozen scheduling the way the bug report describes, §6's own published figures would have been wrong from the day they were written (they'd overstate long-run reliability, since items would go silent after cycle one). This decision doesn't add cost to the budget — it's what makes the budget's own arithmetic true.
+
+### Rejected — Option B ("notify to re-arm")
+
+Sending a dedicated "you need to set this up again" notification when the next cycle comes due is unnecessary once the above is fixed, and actively wrong if built alongside it: the normal ladder already fires for the new cycle (same mechanism, same budget line, nothing extra), so a separate re-arm notification would be a **second, redundant notification competing with the ladder for the same moment** — the exact "second scheduling mechanism duplicating what the already-budgeted ladder provides" pattern this project already rejected once for Snooze (see Decision 1 above). Option B only made sense under the assumption that `Done` permanently blocks the ladder from ever running again for that item — an assumption this decision explicitly rejects.
+
+**If Option B had been adopted instead** (recomputed honestly, since every notification-generating decision in this doc gets its volume counted): it would add one notification per recurring item per cycle, on top of the existing ladder. For the realistic 6-item portfolio in §6, four of the six types recur on a 12-month cycle (Insurance, Vehicle, Licence, Health check) and one on a 120-month cycle (Passport); Warranty and a "no-repeat" Custom item don't recur at all. That's +4 × (1/12) + 1 × (1/120) ≈ **+0.34/month**, moving the steady-state figure from ≈1.12/month to **≈1.46/month** (~30% higher than the current figure, ~62% higher than the pre-Health-check original 0.9/month baseline) — still under the 2–6/week danger band in steady state, but a real, self-inflicted increase for zero user benefit once the ladder is confirmed to keep running on its own. **Not adopted.**
+
+**Net effect on §6: no change to the published figures.** This decision keeps ≈1.12/month exactly as computed — see the addendum added to §6 below.
+
+### Also decided — "Mark as not done" is a real, small v1 feature, scoped to item detail
+
+Confirmed, with a scope boundary: this is a correction path for a mistake noticed *after* the 6-second undo window has lapsed (the window already covers the immediate mis-tap case, REQ-10.2) — not a step in the recurrence flow itself, and not a way to "undo" an old cycle from years back.
+
+- **Where it lives:** item detail overflow (⋮) menu, as `Undo last completion` (final wording is business-analyst's call). Not on the list card — this is a deliberately low-frequency, low-visibility action, consistent with how delete is already tucked behind long-press/overflow rather than a permanent icon.
+- **What it does:** reuses the exact same revert operation already required for the undo toast (REQ-10.2) — restores the item's prior due date (undoing any recurrence advance), prior ladder/overdue schedule, and prior status — just triggered manually from item detail instead of from a time-limited toast. This is a small, cheap addition, not new state-machine complexity: developer already has to build this revert function for the toast; this is the same function with a different entry point and no 6-second clock.
+- **Scope boundary — single-level undo only:** the action reverts only the *most recent* mark-done event on that item, and becomes unavailable (hidden or disabled) the moment anything else changes the item's state — another edit, another mark-done, a delete, or a prior use of this same action. No multi-cycle history or redo stack in v1. This bounds the feature naturally without an arbitrary time cutoff: a passport completion from 9 years ago is already "superseded" the moment anything else has touched the item since, and if truly nothing has touched it in 9 years, undoing that single most-recent action is still a well-defined, harmless operation — no special-casing needed.
+- **Not in scope:** re-doing a previously-undone completion, undoing anything older than the most recent event, or any list-level affordance for this action.
+
+**Routed to ux-designer:** item-detail overflow menu needs a new `Undo last completion` entry, alongside the existing Delete entry drawn per Decision 2 above. Confirm the list no longer needs a persistent "Done, collapsed" treatment for *recurring* items specifically — only terminal-Done items (Warranty, no-repeat Custom) land in that collapsed section now; a completed recurring item reappears wherever its new due date places it, using the existing card treatment for that status, not the `.card.done` reduced-opacity treatment.
+
+**Routed to business-analyst:** write acceptance criteria for (a) status recomputation immediately on recurrence-advance (no dormant/auto-resume state), (b) the terminal-vs-per-cycle `Done` distinction, and (c) the `Undo last completion` action including its single-level-undo boundary. Confirm REQ-4.2's `Done` bullet is scoped correctly to terminal-only cases going forward.
+
+**Routed to developer:** confirm the reconciliation pass (`04-scheduling-and-stack.md` §2) needs no change beyond continuing to compute strictly from each item's current due date — `Done` must never be checked as a scheduling-suppression condition for a recurring item's new cycle. Build the `Undo last completion` action as the same revert function already required for REQ-10.2, exposed via a new entry point.
+
+---
+
 ## 1. V1 definition
 
 A single-user, local-only Android app that tracks a small set of high-consequence renewals and recurring life-admin dates, reminds on an escalating ladder as the due date approaches, and tracks whether the user actually confirmed they did it. No accounts, no sync, no live data lookups.
@@ -85,7 +125,8 @@ A single-user, local-only Android app that tracks a small set of high-consequenc
 - **Reminder ladder**: multiple staged local notifications counting down to the due date, type-aware defaults (exact intervals are a UX-design decision, see §6).
 - **Custom/Other lead-time selector (new)**: a single short/medium/long control at item creation, replacing the fixed 30/7/1 default. See §3a.
 - **Follow-through state**: after the due date passes without the item marked "done," continue nagging on a reduced, de-escalating cadence until the user confirms or dismisses.
-- **Mark as done / renewed**: clears current cycle; for types the user expects to recur, prompt to set the next due date. For Health check specifically, this prompt must not read as clinical guidance — see §3b.
+- **Mark as done / renewed**: clears current cycle; for types the user expects to recur, prompt to set the next due date, after which the item's status recomputes as a normal item against that new due date — `Done` is not a state a recurring item stays parked in (see §3d). For Health check specifically, this prompt must not read as clinical guidance — see §3b.
+- **Mark as not done (new)**: a correction path on item detail for a mistake noticed after the 6-second undo window has lapsed — reverts the most recent mark-done event (due date, schedule, status). See §3d.
 - **Undo toast (new)**: delete and mark-done are both undoable for a short window. See §3c.
 - **List/home screen**: all items with status (upcoming / due soon / overdue / done), including the true first-run empty state.
 - **Local notifications**, with the Android 13+ notification permission request flow handled explicitly, **and notification grouping (new, P0)** — see §6. Notification actions are `Mark done` only — no Snooze in v1 (see revision note 2026-08-21).
@@ -108,6 +149,7 @@ A single-user, local-only Android app that tracks a small set of high-consequenc
 | Editable/custom reminder-ladder timing per item (beyond Custom's short/medium/long selector) | Users get the type's default ladder; letting them hand-tune every stage is real UI complexity for marginal value at this stage | P1 |
 | **Snooze (per-notification "remind me again in N")** (cut this amendment, see revision note 2026-08-21 — was drawn in mockups but never scoped, routed, or budgeted) | It's a second, independent scheduling mechanism duplicating what the already-budgeted ladder/overdue cadence already provides; it broke the notification-volume budget as drawn, and adds real state-machine complexity (interacts with grouping + cancellation bookkeeping) for a convenience, not a gap | P1, only if usage data (not assumption) shows real demand — must be budgeted into §6's volume math honestly if revisited |
 | **Friend/relationship check-in reminders** (considered and rejected in this amendment, not a v1 deferral) | Three independent reasons: (1) it's a rolling interval-since-last-contact model, not a fixed-future-date model — would require a second parallel data model, not a 7th row in an existing one; (2) per-person weekly/fortnightly cadence would roughly triple total notification volume, pushing a multi-person portfolio into the 2–6/week range research associates with disabling notifications or uninstalling; (3) "reach out to a friend" is a different emotional register than "renewals that hurt when you miss them," and that category is already served by dedicated apps | **Not a v1/P1/P2 backlog item.** Candidate for a possible separate future app if ever revisited — not to be re-proposed as a feature of this one |
+| **"Notify to re-arm" per-cycle notification** (considered and rejected 2026-08-21, see revision note above) | Redundant with the ladder once `Done` correctly stops suppressing a recurring item's next-cycle scheduling — would add ≈0.34/month of unbudgeted, duplicate notifications for zero benefit | Not planned — only relevant if the underlying assumption it depends on (ladder scheduling frozen by `Done`) turns out to be true, which this revision explicitly rules out |
 
 **The single hardest cut:** attachments/photo capture. It's a plausible, competitor-validated feature (warranty-tracker apps lead with it) and would be easy to justify adding "since we're already building a detail screen." Cutting it anyway — it pulls the product toward the crowded "document vault" category the positioning explicitly rejects, and every hour spent on camera/storage UX is an hour not spent on the actual differentiator (cadence + follow-through) or on getting a build in front of 12 testers.
 
@@ -183,11 +225,23 @@ Reuses the existing "when's the next one due?" bottom-sheet pattern from design 
 ux-designer flagged this as high-impact/low-effort, specifically because local-only storage means there's no cloud undo and an accidental tap on a stacked list is a real, previously-unmitigated risk for an app whose entire value proposition is "don't let this slip." Accepted into v1. Scope:
 
 - **Covered actions: delete item, and mark-done** (both in-app, from list quick-action or item detail). These are the two actions ux-designer identified as accidental-tap risks with real consequence (data loss / cycle cleared). **List quick-action, specifically:** mark-done is the tap-target checkmark already on every card; delete is reached by long-pressing the card to reveal a delete action (confirmed 2026-08-21 — see revision note above; not yet drawn, routed to ux-designer). Item-detail delete lives behind the existing overflow (⋮) menu.
-- **Not covered in v1:** edit (not flagged as an accidental-tap risk; reversible by editing again), and mark-done triggered from an expanded notification action (no foreground UI surface exists at the moment it fires). This isn't a gap in practice — mark-done never deletes data, it only changes status, and an item's status can always be manually toggled back from its detail screen regardless of whether a toast fired. Stated explicitly here so business-analyst doesn't have to guess at the boundary.
+- **Not covered in v1:** edit (not flagged as an accidental-tap risk; reversible by editing again), and mark-done triggered from an expanded notification action (no foreground UI surface exists at the moment it fires). This isn't a gap in practice — mark-done never deletes data, it only changes status, and an item's status can always be manually toggled back from its detail screen regardless of whether a toast fired (extended by §3d's `Undo last completion` action). Stated explicitly here so business-analyst doesn't have to guess at the boundary.
 - **Window: 6 seconds**, standard Material snackbar/toast duration with an action button, long enough to react without lingering as UI clutter. Countdown starts when the triggering interaction fully resolves (immediately for non-recurring mark-done/delete; after the recurrence bottom sheet is dismissed for recurring mark-done) — confirmed 2026-08-21, see revision note above.
 - **Behavior:** tapping Undo within the window fully reverts the action — for delete, the item and its exact prior ladder/history state are restored; for mark-done, the current cycle re-activates and remaining ladder stages are restored, including reverting any recurrence bottom-sheet choice made during the window.
 - **No persistent trash/soft-delete bin.** After the window lapses, the action is final. A trash bin is real additional scope (storage, a new list, retention rules) for a benefit the 6-second window already covers for the accidental-tap case this is meant to solve; out of scope for v1, not proposed for P1 unless real usage says otherwise.
 - Routed to ux-designer: toast/snackbar visual and copy (mockup update, item 1 and item 3 of the screen set), **plus the long-press delete affordance and item-detail overflow-menu Delete entry per the 2026-08-21 decision above.** Routed to business-analyst: acceptance criteria for both covered actions and the explicit not-covered boundary above. Routed to developer: confirm the cheapest implementation is deferring the destructive write for the 6-second window (no persistent trash table needed).
+
+---
+
+### 3d. Recurrence lifecycle: Done is per-cycle, not per-item (new, 2026-08-21)
+
+See the "product-manager resolves developer's flagged recurrence-lifecycle question" revision note above for the full reasoning. Summary of the locked behavior:
+
+- **Recurring items** (any type where the mark-done flow produces a next due date): the moment that next due date is set, the item's status is recomputed exactly like any other item, from that due date, using the existing Overdue/Due soon/Upcoming rules (REQ-4.2). It does **not** sit in a `Done`/collapsed state waiting for anything to "bring it back" — there is nothing to bring back, because it was never parked there past the undo window.
+- **Terminal items** (Warranty always; Custom items answered "No" to "does this repeat?"): `Done` is a real, persistent status, unchanged from the original spec — stays visible in the collapsed Done section until the user deletes it or uses `Undo last completion`.
+- **Notification volume:** unchanged, ≈1.12/month — the ladder simply keeps firing every cycle, which §6's steady-state math already assumed. See the addendum in §6.
+- **New P0 feature: `Undo last completion`** on item detail (overflow menu) — a correction path for a mistake noticed after the 6-second undo toast has expired. Single-level undo only (most recent mark-done event, invalidated by any subsequent action on the item). Reuses the same revert logic already required for the undo toast (REQ-10.2).
+- Routed to ux-designer, business-analyst, developer per the revision note above.
 
 ---
 
@@ -243,6 +297,8 @@ ux-designer's design doc built the whole notification surface to protect a headl
 
 **Update (2026-08-21):** business-analyst flagged that "Snooze 2 weeks," drawn on every notification in `07-notifications.html`, was never counted in the ≈1.12/month figure above and would have understated it if shipped as drawn. Resolved by cutting Snooze from v1 entirely (see revision note above) — the figures in this section stand exactly as computed, no recompute required. If a snoozing/re-post capability is ever revisited post-v1, it must be added to this table honestly, the same way Health check was, before being treated as budget-neutral.
 
+**Update (2026-08-21, recurrence lifecycle):** developer flagged that a recurring item's status and scheduling behavior after a completed cycle was never specified — resolved by confirming `Done` never suppresses a recurring item's next-cycle ladder (see revision note above). This does not change the figures in this section: the steady-state table already assumed indefinite recurrence, so this decision is what makes that assumption true rather than something that adds to it. The rejected alternative (a dedicated "re-arm" notification per cycle) would have added ≈0.34/month, pushing the total to ≈1.46/month — not adopted; see the revision note above for the full math.
+
 ---
 
 ## 7. Rejected (recorded, not re-litigated)
@@ -250,6 +306,8 @@ ux-designer's design doc built the whole notification surface to protect a headl
 **Friend/relationship check-in reminders** — considered as part of this amendment's review and explicitly rejected. See the table row in §1 for the three reasons (data-model mismatch, notification-volume impact, wrong emotional register for this product's category). This is not a P1/P2 backlog item; if it resurfaces, it should be evaluated as a candidate for a separate future app, not as a feature of this one.
 
 **Snooze (per-notification "remind me again")** — considered as part of business-analyst's acceptance-criteria pass (it had been drawn into the notification mockups without being scoped) and cut from v1 on 2026-08-21. See revision note above for full reasoning. This *is* a P1 candidate (unlike friend reminders), contingent on real usage evidence and an honest volume-budget recompute — not to be re-added to v1 without both.
+
+**"Notify to re-arm" per-cycle notification** — considered as part of resolving developer's recurrence-lifecycle question (2026-08-21) and rejected as redundant once `Done` is correctly scoped to per-cycle rather than per-item. See revision note above. Not a P1 candidate — it only made sense under an assumption this revision explicitly rules out, so there's no future scenario where it becomes worth revisiting on its own terms.
 
 ---
 
@@ -265,6 +323,7 @@ ux-designer's design doc built the whole notification surface to protect a headl
 - Update design doc §2's volume math to reflect the 6-item/7-type recompute in §6 above once final numbers are locked, so the design doc's headline figure stays current rather than diverging from this brief.
 - **(New 2026-08-21)** Remove the "Snooze 2 weeks" action from both notification panels in `docs/design/mockups/07-notifications.html` and from design doc §4's text — Snooze is cut from v1, only `Mark done` ships.
 - **(New 2026-08-21)** Draw the long-press-revealed delete affordance on a card in `docs/design/mockups/01-home-list.html`, and the expanded overflow (⋮) menu showing `Delete` on `docs/design/mockups/03-item-detail.html` — both confirmed as the delete pattern but not yet drawn anywhere.
+- **(New 2026-08-21, recurrence lifecycle)** Add an `Undo last completion` entry to the item-detail overflow menu (alongside Delete). Confirm the list's collapsed `Done` treatment applies only to terminal-Done items (Warranty, no-repeat Custom) — a recurring item that just completed a cycle should render with the normal (non-`.card.done`) card treatment for whatever status its new due date computes to.
 
 ### To business-analyst (resolve before developer build starts)
 
@@ -273,6 +332,7 @@ ux-designer's design doc built the whole notification surface to protect a headl
 - Acceptance criteria for the undo toast, including the explicit not-covered boundary (notification-triggered mark-done) so it isn't treated as a missed case later (§3c).
 - Acceptance criteria for the recurrence-prompt copy constraint on Health check (§3b) — must re-apply the user's own stored interval, never suggest a fresh one.
 - **(New 2026-08-21)** Lock REQ-11.3 to a single `Mark done` notification action (remove the Snooze-contingent branch); close §0.1 and the §15 "Snooze behavior in full" line as resolved-cut, not open; drop risk item 16.4's premise. Update REQ-5.4/§0.2's long-press criterion framing from tentative default to confirmed decision (criteria substance unchanged).
+- **(New 2026-08-21, recurrence lifecycle)** Rewrite REQ-4.2's `Done` bullet to distinguish terminal items (persistent `Done`) from recurring items (status recomputes immediately on cycle-advance, no `Done` state persists past that point). Add acceptance criteria for the new `Undo last completion` action, including its single-level-undo boundary (invalidated by any subsequent edit/mark-done/delete/prior use).
 
 ### To developer (resolve early, before notification architecture is locked)
 
@@ -280,6 +340,7 @@ ux-designer's design doc built the whole notification surface to protect a headl
 - Undo toast: confirm deferred-write approach (no persistent trash table needed) is sufficient for the 6-second window (§3c).
 - Everything carried over unchanged: SCHEDULE_EXACT_ALARM/Doze question, Flutter stack confirmation, RevenueCat vs. direct Play Billing, local storage choice.
 - **(New 2026-08-21)** Notification action set is `Mark done` only for v1 — no snooze-rescheduling logic to build.
+- **(New 2026-08-21, recurrence lifecycle)** Confirm the reconciliation pass (`04-scheduling-and-stack.md` §2) never checks `Done` as a scheduling-suppression condition — it should keep computing purely from each item's current due date, for every cycle, indefinitely. Build `Undo last completion` as the same revert function already required for the undo toast (REQ-10.2), exposed via a new item-detail entry point with no time limit (invalidated instead by any subsequent action on the item).
 
 ### Flagged, not blocking
 
