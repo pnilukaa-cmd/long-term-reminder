@@ -1,7 +1,7 @@
 # V1 Scope — renewal-reminder
 
 Prepared by: product-manager
-Date: 2026-08-20 (amended same day, see revision note)
+Date: 2026-08-20 (amended 2026-08-20 and 2026-08-21 — see revision notes)
 Inputs: `/home/user/renewal-reminder/CLAUDE.md` (pitch, positioning, constraints), `docs/research/00-problem-space.md`, `docs/design/02-v1-design.md` (ux-designer's first design pass, produced against the original scope)
 Routed to: ux-designer (mockup/ladder updates), business-analyst (requirements + copy), developer (build + technical spikes), qa-tester (test criteria)
 
@@ -23,13 +23,64 @@ Everything below is the full brief with these changes integrated, not an addendu
 
 ---
 
+## Revision note (2026-08-21, product-manager resolves business-analyst's flagged conflicts)
+
+business-analyst's v1 acceptance-criteria pass (`docs/requirements/03-v1-acceptance-criteria.md` §0) surfaced two real conflicts and flagged several stated defaults for explicit product sign-off. Resolved below. **These are locked decisions, not reopened questions** — downstream agents should build/mock/test against them, not relitigate them.
+
+### Decision 1 — Snooze is cut from v1
+
+Snooze was never in the P0 list (§1), never routed (§8), and — critically — never counted in the ≈1.12/month notification-volume budget (§6), which is the one number this entire revision is built to protect. It nonetheless appeared as a first-class action on every notification in `docs/design/mockups/07-notifications.html` and in design doc §4, unrouted scope creep that would have silently broken the budget the design otherwise honestly protects.
+
+**Cutting it, not accounting for it.** Reasoning:
+- The concern behind keeping it — "what does a user do with a notification they can't act on right now" — is already answered by the existing ladder/overdue cadence, which exists specifically to re-touch the user later without inventing a second scheduling mechanism. Dismissing a notification doesn't lose the item: it stays on the list at its correct status, and the next ladder stage or overdue nag (already scheduled, already budgeted) reminds them again. Even after a type's overdue sequence ends, the item stays visible as "Overdue" indefinitely per REQ-3.3 — nothing is forgotten.
+- Snooze duplicates that mechanism as a second, independent, per-notification scheduling path — real added state-machine complexity (business-analyst flagged this directly as risk item 16.4, interacting with grouping and cancellation bookkeeping) for a need the existing cadence already substantially covers.
+- ux-designer's own suggested-enhancements table lists "Snooze duration picker (not fixed 2 weeks)" as a P2-feeling, low-impact idea for triage — meaning even ux-designer treats a refinement of snooze as optional, while the base capability was drawn into the mockups as if already locked. That inconsistency is itself a signal this wasn't actually scoped, just assumed.
+- v1's own framing (§0 above) is explicit: smallest viable version, biased toward shipping smaller, over-scoping is the dominant failure risk for a solo first project. Snooze is a convenience feature, not a gap in the core loop.
+
+**"Mark done" is not a lie if used correctly** — it's only mis-tappable if a user acts on a notification they haven't actually resolved, which is a UX-clarity risk either way (with or without snooze) and not a reason to add a parallel scheduling system. The correct action for "I can't deal with this right now" is simply to leave the notification — the app already reminds again on schedule.
+
+**No recompute needed** — the ≈1.12/month figure and the "6 in the worst week" ceiling in §6 stand exactly as computed, since the thing that would have invalidated them (snooze re-posts) isn't shipping.
+
+**Status:** P1 candidate for a future release, *if* real usage data (not assumption) shows users need finer control over reminder timing than the existing ladder gives them. If revisited, it must be budgeted into the volume math honestly at that time, the same way every other notification-generating feature in this doc has been.
+
+**Routed to ux-designer:** remove the "Snooze 2 weeks" action from both panels (`p1`, `p2`) in `docs/design/mockups/07-notifications.html`, and remove the "Snooze" action from design doc §4's text description of notification actions. No other mockup or screen is affected (snooze never appeared in-app, only in the tray mock).
+
+**Routed to business-analyst:** lock REQ-11.3 to a single `Mark done` action (drop the "contingent on §0.1" language and the "if Snooze is confirmed out of scope" branch — there's only one branch now). Close §0.1 and the "Snooze behavior in full" line in §15 as resolved-cut, not open. Drop risk item 16.4's premise (no longer applicable).
+
+### Decision 2 — Delete affordance: long-press confirmed
+
+business-analyst's default is adopted: **list-level delete is reached by long-pressing a card**, which reveals a delete action; **item-detail delete lives behind the existing overflow (⋮) menu**. Reasoning:
+- Long-press is the standard Android pattern for a destructive secondary action that shouldn't occupy a permanent icon on every row — consistent with the same accidental-trigger reasoning the design doc already used to reject swipe-to-delete on this same card.
+- It keeps the list card visually uncluttered (one visible action — mark-done — matching the mockups as drawn), which the design doc treats as a deliberate choice elsewhere (e.g., not listing every ladder stage on the card).
+- It's the cheapest option that still honors scope doc §3c's existing commitment that delete is undoable "from list quick-action or item detail" — restricting delete to item-detail-only would be a scope cut nobody asked for and would make the fastest deletion path a two-screen trip, which is a real regression for a list-first app.
+
+This was drawn nowhere in the mockups, so it isn't fully locked as a visual — only as the interaction pattern. **Routed to ux-designer:** draw two states that don't currently exist: (1) the long-press-revealed delete affordance on a card in `docs/design/mockups/01-home-list.html`, and (2) the expanded overflow (⋮) menu on `docs/design/mockups/03-item-detail.html` showing a `Delete` entry. If long-press discoverability is a concern, a lightweight one-time hint is acceptable P2 polish — not a v1 blocker, and not a reason to add a persistent per-row icon instead.
+
+**Routed to business-analyst:** REQ-5.4's long-press criterion (currently flagged `[BA DEFAULT, flagged in §0.2]`) is now a confirmed product decision, not a tentative default — update its framing accordingly once ux-designer's mockup states land; the acceptance criteria themselves don't need to change in substance.
+
+### Five business-analyst defaults reviewed and confirmed as owned product decisions
+
+Per the instruction that these are product decisions now, not analyst assumptions — reviewed against the mockups and the app's own stated positioning, and confirmed as correct, not just left standing by default:
+
+1. **Undo-window timing (§0.3 / REQ-10.2)** — the 6-second countdown starts when the mark-done interaction fully resolves (immediately after tap for non-recurring types; immediately after the recurrence bottom sheet is dismissed for recurring types), not at the initial tap. **Confirmed.** The alternative would make Undo silently unusable for anyone who takes the manual date-picker path — a real, not theoretical, failure mode.
+2. **Recurrence smart-default basis (§0.5 / REQ-9.1)** — computed from the *due date* plus the interval, not from the completion date, applied uniformly across all recurring types. **Confirmed.** This is also the objectively correct behavior for this product's category, not just the consistent one: a passport's next expiry is genuinely 10 years from the prior expiry, not 10 years from whenever the user got around to renewing it. Anchoring to completion date would silently drift a user's renewal cycle earlier every time they complete a task early.
+3. **Backdated items at creation (REQ-17.1)** — accepted without validation-blocking, immediately shown `Overdue`, Day-0 nag fires immediately. **Confirmed.** Blocking backdated entry would actively work against the exact first-run scenario this app should welcome (someone logging several already-lapsed things at once).
+4. **Timezone and device-clock changes (REQ-17.2)** — reminders re-evaluate against the device's current timezone at delivery time; already-fired notifications never re-fire; a clock jump forward treats missed stages as skipped, not queued for a delivery burst. **Confirmed.** The alternative (a burst of stale notifications after a clock correction) is exactly the kind of bug that would undermine trust in an app whose entire pitch is a well-calibrated cadence — the defensive default is the right call even though it's a rare scenario.
+5. **Loss of paid entitlement (REQ-17.3)** — degrade gracefully to the free-tier view, no data deleted, clear path back via Restore purchase. **Confirmed.** No other outcome is compatible with the local-only-storage promise in §2/REQ-15.2 — deleting or blocking access to data on an entitlement failure (not expected to happen under normal operation, but must degrade safely if it does) would break a commitment this doc treats as load-bearing elsewhere.
+
+No changes needed to the acceptance criteria for these five — they were already written correctly against the right defaults. This section exists so the decisions are recorded as product-owned, not analyst-assumed, per the standing instruction that BA-stated defaults on real ambiguities become product decisions once flagged.
+
+Other scattered `[BA DEFAULT]` items not named above (e.g., label-validation copy reuse, per-type unlock-banner copy, overlapping-undo-toast behavior, restore-purchase failure copy, type-change-on-edit triggering a recompute) are accepted as reasonable analyst-level judgment calls within business-analyst's normal delegated authority — they don't rise to the level of needing individual product sign-off, and re-litigating all of them here would be its own form of scope creep.
+
+---
+
 ## 1. V1 definition
 
 A single-user, local-only Android app that tracks a small set of high-consequence renewals and recurring life-admin dates, reminds on an escalating ladder as the due date approaches, and tracks whether the user actually confirmed they did it. No accounts, no sync, no live data lookups.
 
 ### In scope (P0 — must ship)
 
-- **Add/edit/delete a renewal item**: type (from 7 presets, see §3), label, due date, optional notes.
+- **Add/edit/delete a renewal item**: type (from 7 presets, see §3), label, due date, optional notes. Delete is undoable from either the list (long-press to reveal, see revision note 2026-08-21) or item detail (overflow menu).
 - **7 preset types**, each with an icon and a default reminder ladder: Passport/Travel ID, Insurance, Professional Licence/Certification, Vehicle (registration/tax/MOT — generic, manual entry, no live lookup), Warranty, Health check (new — see §3), Custom/Other.
 - **Reminder ladder**: multiple staged local notifications counting down to the due date, type-aware defaults (exact intervals are a UX-design decision, see §6).
 - **Custom/Other lead-time selector (new)**: a single short/medium/long control at item creation, replacing the fixed 30/7/1 default. See §3a.
@@ -37,7 +88,7 @@ A single-user, local-only Android app that tracks a small set of high-consequenc
 - **Mark as done / renewed**: clears current cycle; for types the user expects to recur, prompt to set the next due date. For Health check specifically, this prompt must not read as clinical guidance — see §3b.
 - **Undo toast (new)**: delete and mark-done are both undoable for a short window. See §3c.
 - **List/home screen**: all items with status (upcoming / due soon / overdue / done), including the true first-run empty state.
-- **Local notifications**, with the Android 13+ notification permission request flow handled explicitly, **and notification grouping (new, P0)** — see §6.
+- **Local notifications**, with the Android 13+ notification permission request flow handled explicitly, **and notification grouping (new, P0)** — see §6. Notification actions are `Mark done` only — no Snooze in v1 (see revision note 2026-08-21).
 - **One-time unlock (paywall)** — see §2.
 - **Local-only storage.** No account, no cloud, no sync. Nothing leaves the device.
 - Every screen (list, add/edit, detail, paywall, permission prompts) covers loading/empty/error/success per working agreement.
@@ -55,6 +106,7 @@ A single-user, local-only Android app that tracks a small set of high-consequenc
 | Widgets, dark theme, search/filter/sort | Polish, not core loop | P2 |
 | Multi-language / localization | English only, v1 | P1+ if a real market signal shows up |
 | Editable/custom reminder-ladder timing per item (beyond Custom's short/medium/long selector) | Users get the type's default ladder; letting them hand-tune every stage is real UI complexity for marginal value at this stage | P1 |
+| **Snooze (per-notification "remind me again in N")** (cut this amendment, see revision note 2026-08-21 — was drawn in mockups but never scoped, routed, or budgeted) | It's a second, independent scheduling mechanism duplicating what the already-budgeted ladder/overdue cadence already provides; it broke the notification-volume budget as drawn, and adds real state-machine complexity (interacts with grouping + cancellation bookkeeping) for a convenience, not a gap | P1, only if usage data (not assumption) shows real demand — must be budgeted into §6's volume math honestly if revisited |
 | **Friend/relationship check-in reminders** (considered and rejected in this amendment, not a v1 deferral) | Three independent reasons: (1) it's a rolling interval-since-last-contact model, not a fixed-future-date model — would require a second parallel data model, not a 7th row in an existing one; (2) per-person weekly/fortnightly cadence would roughly triple total notification volume, pushing a multi-person portfolio into the 2–6/week range research associates with disabling notifications or uninstalling; (3) "reach out to a friend" is a different emotional register than "renewals that hurt when you miss them," and that category is already served by dedicated apps | **Not a v1/P1/P2 backlog item.** Candidate for a possible separate future app if ever revisited — not to be re-proposed as a feature of this one |
 
 **The single hardest cut:** attachments/photo capture. It's a plausible, competitor-validated feature (warranty-tracker apps lead with it) and would be easy to justify adding "since we're already building a detail screen." Cutting it anyway — it pulls the product toward the crowded "document vault" category the positioning explicitly rejects, and every hour spent on camera/storage UX is an hour not spent on the actual differentiator (cadence + follow-through) or on getting a build in front of 12 testers.
@@ -130,12 +182,12 @@ Reuses the existing "when's the next one due?" bottom-sheet pattern from design 
 
 ux-designer flagged this as high-impact/low-effort, specifically because local-only storage means there's no cloud undo and an accidental tap on a stacked list is a real, previously-unmitigated risk for an app whose entire value proposition is "don't let this slip." Accepted into v1. Scope:
 
-- **Covered actions: delete item, and mark-done** (both in-app, from list quick-action or item detail). These are the two actions ux-designer identified as accidental-tap risks with real consequence (data loss / cycle cleared).
+- **Covered actions: delete item, and mark-done** (both in-app, from list quick-action or item detail). These are the two actions ux-designer identified as accidental-tap risks with real consequence (data loss / cycle cleared). **List quick-action, specifically:** mark-done is the tap-target checkmark already on every card; delete is reached by long-pressing the card to reveal a delete action (confirmed 2026-08-21 — see revision note above; not yet drawn, routed to ux-designer). Item-detail delete lives behind the existing overflow (⋮) menu.
 - **Not covered in v1:** edit (not flagged as an accidental-tap risk; reversible by editing again), and mark-done triggered from an expanded notification action (no foreground UI surface exists at the moment it fires). This isn't a gap in practice — mark-done never deletes data, it only changes status, and an item's status can always be manually toggled back from its detail screen regardless of whether a toast fired. Stated explicitly here so business-analyst doesn't have to guess at the boundary.
-- **Window: 6 seconds**, standard Material snackbar/toast duration with an action button, long enough to react without lingering as UI clutter.
+- **Window: 6 seconds**, standard Material snackbar/toast duration with an action button, long enough to react without lingering as UI clutter. Countdown starts when the triggering interaction fully resolves (immediately for non-recurring mark-done/delete; after the recurrence bottom sheet is dismissed for recurring mark-done) — confirmed 2026-08-21, see revision note above.
 - **Behavior:** tapping Undo within the window fully reverts the action — for delete, the item and its exact prior ladder/history state are restored; for mark-done, the current cycle re-activates and remaining ladder stages are restored, including reverting any recurrence bottom-sheet choice made during the window.
 - **No persistent trash/soft-delete bin.** After the window lapses, the action is final. A trash bin is real additional scope (storage, a new list, retention rules) for a benefit the 6-second window already covers for the accidental-tap case this is meant to solve; out of scope for v1, not proposed for P1 unless real usage says otherwise.
-- Routed to ux-designer: toast/snackbar visual and copy (mockup update, item 1 and item 3 of the screen set). Routed to business-analyst: acceptance criteria for both covered actions and the explicit not-covered boundary above. Routed to developer: confirm the cheapest implementation is deferring the destructive write for the 6-second window (no persistent trash table needed).
+- Routed to ux-designer: toast/snackbar visual and copy (mockup update, item 1 and item 3 of the screen set), **plus the long-press delete affordance and item-detail overflow-menu Delete entry per the 2026-08-21 decision above.** Routed to business-analyst: acceptance criteria for both covered actions and the explicit not-covered boundary above. Routed to developer: confirm the cheapest implementation is deferring the destructive write for the 6-second window (no persistent trash table needed).
 
 ---
 
@@ -189,11 +241,15 @@ ux-designer's design doc built the whole notification surface to protect a headl
 
 **Not treated as broken, and not over-fixed:** I'm not cutting a type or reducing steady-state ladder stage counts to chase this — the steady-state number is fine, and the edge case is still, honestly, a self-selecting scenario (a user who's let every single tracked item lapse simultaneously is already at elevated disable/uninstall risk for reasons that have nothing to do with this app). Grouping plus a lighter Health check overdue cadence is a proportionate response; redesigning the whole cadence system in response to one edge-case portfolio would be overcorrecting on a budget that, in the case that actually matters (steady state), isn't in trouble.
 
+**Update (2026-08-21):** business-analyst flagged that "Snooze 2 weeks," drawn on every notification in `07-notifications.html`, was never counted in the ≈1.12/month figure above and would have understated it if shipped as drawn. Resolved by cutting Snooze from v1 entirely (see revision note above) — the figures in this section stand exactly as computed, no recompute required. If a snoozing/re-post capability is ever revisited post-v1, it must be added to this table honestly, the same way Health check was, before being treated as budget-neutral.
+
 ---
 
 ## 7. Rejected (recorded, not re-litigated)
 
 **Friend/relationship check-in reminders** — considered as part of this amendment's review and explicitly rejected. See the table row in §1 for the three reasons (data-model mismatch, notification-volume impact, wrong emotional register for this product's category). This is not a P1/P2 backlog item; if it resurfaces, it should be evaluated as a candidate for a separate future app, not as a feature of this one.
+
+**Snooze (per-notification "remind me again")** — considered as part of business-analyst's acceptance-criteria pass (it had been drawn into the notification mockups without being scoped) and cut from v1 on 2026-08-21. See revision note above for full reasoning. This *is* a P1 candidate (unlike friend reminders), contingent on real usage evidence and an honest volume-budget recompute — not to be re-added to v1 without both.
 
 ---
 
@@ -207,6 +263,8 @@ ux-designer's design doc built the whole notification surface to protect a headl
 - Undo toast: visual/copy for both covered actions (delete, mark-done) across list and detail screens.
 - Notification grouping: confirm the grouped/summary notification's visual treatment where it appears in the mockups (list/detail unaffected; this is a system-tray-level change).
 - Update design doc §2's volume math to reflect the 6-item/7-type recompute in §6 above once final numbers are locked, so the design doc's headline figure stays current rather than diverging from this brief.
+- **(New 2026-08-21)** Remove the "Snooze 2 weeks" action from both notification panels in `docs/design/mockups/07-notifications.html` and from design doc §4's text — Snooze is cut from v1, only `Mark done` ships.
+- **(New 2026-08-21)** Draw the long-press-revealed delete affordance on a card in `docs/design/mockups/01-home-list.html`, and the expanded overflow (⋮) menu showing `Delete` on `docs/design/mockups/03-item-detail.html` — both confirmed as the delete pattern but not yet drawn anywhere.
 
 ### To business-analyst (resolve before developer build starts)
 
@@ -214,12 +272,14 @@ ux-designer's design doc built the whole notification surface to protect a headl
 - Acceptance criteria for the Custom lead-time selector, including its interaction with free/paid gating (§3a).
 - Acceptance criteria for the undo toast, including the explicit not-covered boundary (notification-triggered mark-done) so it isn't treated as a missed case later (§3c).
 - Acceptance criteria for the recurrence-prompt copy constraint on Health check (§3b) — must re-apply the user's own stored interval, never suggest a fresh one.
+- **(New 2026-08-21)** Lock REQ-11.3 to a single `Mark done` notification action (remove the Snooze-contingent branch); close §0.1 and the §15 "Snooze behavior in full" line as resolved-cut, not open; drop risk item 16.4's premise. Update REQ-5.4/§0.2's long-press criterion framing from tentative default to confirmed decision (criteria substance unchanged).
 
 ### To developer (resolve early, before notification architecture is locked)
 
 - Notification grouping implementation (new, §6) — this now sits alongside the existing exact-alarm/Doze question as an early architectural decision, not a later polish item, since it protects a stated product constraint.
 - Undo toast: confirm deferred-write approach (no persistent trash table needed) is sufficient for the 6-second window (§3c).
 - Everything carried over unchanged: SCHEDULE_EXACT_ALARM/Doze question, Flutter stack confirmation, RevenueCat vs. direct Play Billing, local storage choice.
+- **(New 2026-08-21)** Notification action set is `Mark done` only for v1 — no snooze-rescheduling logic to build.
 
 ### Flagged, not blocking
 
