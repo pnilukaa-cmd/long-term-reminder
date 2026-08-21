@@ -35,6 +35,17 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
 
+  # --- Vertical-slice-1 additions (local storage) ---
+  # Versions below are my best estimate of current, well-maintained releases
+  # — I have no network access in this environment to check pub.dev, so
+  # treat these as a starting point, not a verified pin. Run
+  # `flutter pub outdated` after `flutter pub get` to confirm nothing has
+  # moved on since.
+  drift: ^2.21.0
+  sqlite3_flutter_libs: ^0.5.24
+  path_provider: ^2.1.4
+  path: ^1.9.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -45,6 +56,10 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+
+  # --- Vertical-slice-1 additions (drift code generation) ---
+  drift_dev: ^2.21.0
+  build_runner: ^2.4.13
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

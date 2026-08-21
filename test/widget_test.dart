@@ -1,30 +1,47 @@
-// This is a basic Flutter widget test.
+// Smoke test for the real app shell: boots against an in-memory database
+// (no filesystem access, no path_provider plugin channel needed) and
+// checks that a brand-new install renders the first-run empty state
+// (REQ-4.1) rather than a blank screen or an unhandled exception.
 //
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
+// NOTE TO WHOEVER RUNS THIS: this test constructs `AppDatabase.forTesting`
+// with an in-memory `NativeDatabase`, which needs the generated
+// `app_database.g.dart` (via `dart run build_runner build`) to exist
+// before this file will even compile. See the developer handoff notes in
+// the PR/commit message for the full command sequence.
 
+import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:long_term_reminder/main.dart';
+import 'package:long_term_reminder/data/database/app_database.dart';
+import 'package:long_term_reminder/data/repository/renewal_repository.dart';
+import 'package:long_term_reminder/data/repository/settings_repository.dart';
+import 'package:long_term_reminder/theme/app_theme.dart';
+import 'package:long_term_reminder/ui/home/home_screen.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('fresh install shows the first-run empty state, not a blank screen', (tester) async {
+    final database = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(database.close);
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    final renewalRepository = RenewalRepository(database.renewalDao);
+    final settingsRepository = SettingsRepository(database.settingsDao);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: HomeScreen(repository: renewalRepository, settingsRepository: settingsRepository),
+      ),
+    );
+
+    // First frame: the stream hasn't emitted yet — loading skeleton.
     await tester.pump();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Let the drift stream deliver its first (empty) snapshot.
+    await tester.pumpAndSettle();
+
+    expect(find.text('What do you want to track first?'), findsOneWidget);
+    expect(find.text('Passport'), findsOneWidget);
+    expect(find.text('Health check'), findsOneWidget);
   });
 }
