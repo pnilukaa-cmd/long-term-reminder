@@ -1,12 +1,20 @@
 # V1 Design Direction — renewal-reminder
 
 Prepared by: ux-designer
-Date: 2026-08-20 (amended 2026-08-20 and 2026-08-21 — see revision notes)
-Inputs: `CLAUDE.md`, `docs/product/01-v1-scope.md` (amended — §8 routes five items here, then two more targeted changes on 2026-08-21), `docs/research/00-problem-space.md`, this doc's own first pass
+Date: 2026-08-20 (amended 2026-08-20, 2026-08-21, and 2026-08-21 dark-theme pass — see revision notes)
+Inputs: `CLAUDE.md`, `docs/product/01-v1-scope.md` (amended — §8 routes five items here, then two more targeted changes on 2026-08-21), `docs/research/00-problem-space.md`, this doc's own first pass, `lib/theme/` (developer's placeholder dark derivation, corrected in this pass — see §7a)
 Routed to: product-manager (react/prioritize), business-analyst (lock acceptance criteria against this), developer (implement), user (react)
-Mockups: `docs/design/mockups/*.html` — open directly in a browser, no build step, no external dependencies
+Mockups: `docs/design/mockups/*.html` — open directly in a browser, no build step, no external dependencies. New: `08-dark-theme.html` (full dark palette + status legibility + Home/List and Item detail in dark, all states).
 
 No shared theme/token source exists yet for this app — §7 below **is** the theme. It's inlined into every mockup's `<style>` block rather than linked, since these files are meant to be opened standalone.
+
+---
+
+## Revision note (2026-08-21, dark theme design pass)
+
+`developer` flagged the dark theme explicitly: it shipped only as their own algorithmic tonal derivation (`ColorScheme.fromSeed` for the stock M3 roles, hand-guessed values for the two custom semantic roles and the seven category tints), because no dark mockup existed to design against — and said so plainly in code comments in `lib/theme/`, rather than quietly treating it as done. This pass replaces that placeholder with a designed dark palette. Summary of what changed and why is in new **§7a**; the reviewable artifact is `docs/design/mockups/08-dark-theme.html`.
+
+**What's new, in one paragraph:** every dark role was retoned from its own light-mode hue/chroma (measured in CIELAB, not guessed or inverted) onto M3's standard dark tonal targets — this is real color-science work, not a lightness flip. Two confirmed bugs in the *shared* (light+dark) theme code were found and are flagged with fixes: `cardTheme` uses `surfaceContainerLowest`, which in dark is *darker* than the scaffold (wrong direction — cards would look like holes, not elevated surfaces), and `snackBarTheme` hardcodes a literal `#2B2B33` that nearly disappears against dark surfaces (it was implicitly relying on being the opposite brightness of the page, which only holds in light). The warning role needed a genuine hue correction, not just a lightness retone, because a naive version rendered as salmon — nearly on top of error's dark hue. Health check's tint is resolved against error with a quantified fix (hue separation increased from ~43° to ~56°, verified under simulated protanopia/deuteranopia, not just eyeballed) — full writeup in §7a.
 
 ---
 
@@ -299,6 +307,60 @@ Exact values are in the `:root` block at the top of each mockup file — identic
 
 ---
 
+## 7a. Dark theme — full palette, resolved (new, 2026-08-21)
+
+`developer`'s comment in `lib/theme/app_theme.dart` says it plainly: the dark scheme was generated algorithmically via `ColorScheme.fromSeed` for the stock M3 roles, with the two custom semantic roles and the seven category tints hand-guessed as "roughly inverting each pair's tonal relationship" — flagged as needing a real design pass before being treated as shippable. This section is that pass. Mockup: `docs/design/mockups/08-dark-theme.html`.
+
+**Methodology, stated plainly so it's checkable, not just asserted:** I did not naively invert the light palette (swap the container/on-container pair and call it done) or trust `ColorScheme.fromSeed`'s single-seed-hue guess for roles that already have designer-chosen hues in light. Instead, for every role I measured the light-mode value's actual hue and chroma in CIELAB space, then retoned it to M3's standard dark tonal target for that role (primary→tone 80, primaryContainer→tone 30, category container/on-container→tone 30/90, the surface ladder→tones 4/6/10/12/17/22, etc. — the same tone-role assignments M3's own spec uses, computed by hand against this app's actual seed instead of run through the generic seed algorithm). Error keeps the M3 baseline dark tones as-is, since this app's light error is already the unmodified M3 baseline (`#BA1A1A`/`#FFDAD6`) — no reason to deviate there. Every container/on-container pair checks ≥6.5:1 contrast (most ≥7:1) against its own text.
+
+**What I changed from `developer`'s derivation, explicitly:**
+- **All seven category tints** — `developer`'s were a rough tonal inversion; these are hue/chroma-anchored retones, and one (vehicle) needed its chroma deliberately reined in to avoid a new collision — see below.
+- **Both custom semantic roles (warning, success)** — `developer`'s warning in particular needed correcting past a simple retone: a same-hue version reads as salmon, not amber, at dark-appropriate lightness. See the warning callout below.
+- **Two bugs in the shared (non-brightness-specific) theme code**, not really a "light vs. dark palette" issue but found during this pass: `cardTheme.color` and `snackBarTheme.backgroundColor` in `_themeFrom()` use light-appropriate logic unconditionally. See the elevation section below.
+- **Health check's category tint hue** is rotated further in dark (335°) than a literal retone of light's hue (348°) would give — the one deliberate light-vs-dark hue deviation in the whole set, and the direct answer to this task's core ask. Full resolution below.
+- **Stock M3 roles** (primary, secondary, surface ladder, error) — recomputed via the Lab-retone method above rather than `ColorScheme.fromSeed`'s output, but landed close to what a well-tuned seed-based generation would produce; the point of doing it by hand was to keep every role's hue *exactly* anchored to this app's actual light-mode values (which themselves aren't a pure single-seed derivation — the surface ladder has its own subtle hue, slightly different from primary's) rather than re-deriving everything from one seed color and accepting whatever drift that introduces.
+
+### Status legibility in dark
+
+Shape + icon + color role + text label — all four channels — carry over completely unchanged; only the color role's hex value changes per scheme, which is the entire point of building status language on a role system rather than literal colors. Verified in the mockup's populated Home/List state (§6 of the mockup) with all four statuses present at once (Overdue, Due soon, Upcoming, Done) plus a second Upcoming card specifically to keep Health check in frame next to Overdue's card.
+
+**Overdue specifically** — the one status the brief says must not lose force: dark `errorContainer` is `#93000A` (a deep, saturated red — not lightened or muted for dark), `onErrorContainer` is `#FFDAD6`. Contrast against the dark scaffold is 10.9:1. The pennant-notch silhouette (the one status dot with an asymmetric corner, distinct from every other status and never reused on a category badge) is pixel-identical in shape to light. Nothing about overdue reads softer in dark.
+
+### The warning role needed a hue fix, not just a lightness retone
+
+A literal same-hue retone of light's warning (Lab hue ≈41°, the same hue direction as "amber/brown") up to a dark-appropriate high lightness produces `#FFAC90` — a salmon-peach, sitting only ~14° from dark error's hue (≈31°) at a similar lightness and chroma. This is a real instance of the brief's warning that "saturated hues that work on white frequently vibrate or muddy on near-black" — in this case, a hue that reads clearly as amber/gold-brown at low-to-mid lightness (in light mode) reads as pink-salmon at the high lightness dark mode needs, because the perceptual "amber" direction shifts as lightness increases. I swept hue values at the target lightness and found the point where it reads as gold again: **hue 83°**, giving `#EBC070` (warning) / `#634700` (warningContainer) — a proper amber, 52° from error's dark hue, no ambiguity. This is the single largest hue correction in the whole set and the clearest example of why "just invert the light values" would have failed.
+
+**Second-order consequence, also fixed:** Vehicle's category tint (terracotta/clay in light, deliberately *not* amber, per §6's own rule that category tints avoid amber/red/green) risked drifting back into amber territory in dark if its chroma were boosted by the same ratio as the other categories — a straight 3.1× chroma scale-up lands at `#693C0D`, only 18° from the corrected warning hue and getting close in chroma too. Fixed by keeping Vehicle's dark chroma more muted (1.6× rather than 3.1×) and nudging its hue down slightly (65°→59°), landing at `#5E402D` — still reads as clay/brown, not amber, 24° clear of warning and much lower chroma. This preserves the *reason* Vehicle was made terracotta in the first place (so it wouldn't collide with the status-amber role) into the mode where the collision risk is actually higher.
+
+### Health check vs. error — resolved (the core ask of this pass)
+
+Flagged in light as "the closest hue in the system to error, worth a colorblind check." I did the check, rather than carry the flag forward into dark unresolved, since the brief is explicit that dark makes this harder (less usable hue range near-black) and asks for a resolution, not another flag.
+
+**The fix:** rotated Health check's dark hue to **335°** (still reads as "berry/plum" — the family the copy already promises, e.g. "dusty rose/berry") rather than a literal retone of light's hue (348°). This gives:
+- **~56° separation from dark error's hue (31°)**, up from ~43° a naive same-hue retone would have given.
+- **Checked against the next-nearest category, not just error in isolation** — 335° sits ~26° from Professional Licence's violet (309°), which is a comfortable margin; I didn't fix one collision by creating another.
+
+**Verified under simulated colorblindness, not just hue-angle math.** I ran both candidate hues through the Machado et al. (2009) protanopia and deuteranopia simulation matrices against dark `errorContainer` (`#93000A`). Under simulated deuteranopia, error-container renders as an olive-brown (`#5C5100`); the chosen Health-container (hue 335°) renders as a blue-slate (`#434A5F`) — a CIELAB ΔE of **56** (ΔE >10 is the conventional threshold for "clearly distinguishable"; this is over 5× that). The naive same-hue candidate (348°) scored ΔE 46 under the same simulation — probably already fine, but the rotation adds real, quantified margin rather than being a cosmetic gesture. The mechanism is worth stating because it generalizes: pink/magenta carries more blue than red-orange does, and dichromats retain blue-axis discrimination even when red-green discrimination collapses — so rotating a warm-pink hue *toward violet* is specifically the right move when it needs to stay clear of a red, not an arbitrary tweak.
+
+**Resolved by hue separation — reinforced by form, not dependent on it.** The two never had to be told apart by color alone even in principle: Health's badge carries its own heart+pulse glyph and sits in a card's *type-badge* slot (left); Overdue's status dot carries the pennant-notch silhouette and sits in the *status* slot (right) — different UI regions, different icons, per §6's own "shape+icon+color+label, not color alone" rule. The hue fix removes the risk at the color layer specifically because that's the layer that was actually close; form differentiation was already sound and unchanged.
+
+**I'm treating this as resolved, not re-flagged.** Given the hue-angle margin, the simulated-colorblindness verification, and the pre-existing form differentiation, I don't think this needs another look before `developer` implements it — but the deltaE numbers and hue angles above are reproducible from the hex values in the token table, so `qa-tester` can re-check with a proper CVD-simulation tool during their pass if they want an independent confirmation.
+
+### Elevation and shadow — the light-mode assumption that breaks in dark
+
+Material 3's dark mode conveys elevation with a **tonal surface ladder** (each higher surface uses a progressively lighter tone of the same near-black neutral), not primarily with shadow — a drop shadow is always literally black, and black-on-near-black is nearly invisible. The light theme's cue is the opposite: a card that's *whiter* than its scaffold (`surfaceContainerLowest`, tone 100, on a tone-98 scaffold) plus a shadow that reads clearly against a light background. That specific pairing doesn't survive a straight port to dark, and I found two places in the current shared theme code where it wasn't ported at all — both are real, confirmed defects, not hypothetical risk:
+
+1. **`cardTheme.color` is `colorScheme.surfaceContainerLowest` unconditionally.** In dark, `surfaceContainerLowest` is tone 4 — *darker* than the tone-6 scaffold sitting behind it. A card would render as a faint recessed hole, the opposite of "elevated." **Fix:** in dark, cards should sit on `surfaceContainer` (tone 12) at rest and `surfaceContainerHigh` (tone 17) when held/raised (long-press) — both lighter than the tone-6 scaffold, correct direction, matching the tonal-ladder approach.
+2. **`snackBarTheme.backgroundColor` hardcodes the literal `Color(0xFF2B2B33)`.** In light this works precisely because it's a fixed dark neutral against a light page — it's implicitly playing the role of "the opposite scheme's surface." In dark, `#2B2B33` sits almost exactly inside the `surfaceContainerHigh`/`surfaceContainerHighest` range (`#2A2932`–`#35343D`) — the toast would nearly vanish into the page it's meant to float above. **Fix:** use the role M3 actually defines for this — `inverseSurface`/`onInverseSurface`, which by construction always renders as the opposite scheme's surface. Dark's `inverseSurface` computes to `#E3E2E9` with `onInverseSurface` `#303036` (i.e., a light toast on a dark screen — also standard platform behavior elsewhere on Android).
+
+The FAB (`primaryContainer`) and the bottom sheet / overflow menu popover need no fix beyond the same tonal-ladder logic: bottom sheet and menu popover should sit at `surfaceContainerHighest` (tone 22, the brightest floating tier) rather than `surfaceContainerLowest` in dark. Full mapping table, plus a visual elevation-ladder strip, is at the top of `08-dark-theme.html`.
+
+### Full token table (developer handoff)
+
+Every dark hex value — `ColorScheme` fields, both custom semantic roles, all seven category tints — is tabulated in `08-dark-theme.html` §5, keyed to the exact field names already used in `lib/theme/app_theme.dart`, `app_semantic_colors.dart`, and `category_tint.dart` (`kCategoryTintsDark`), so this is a value-swap for `developer`, not a re-interpretation. Light-mode values are repeated alongside each dark value in the same table for direct comparison and to make clear which values are genuinely unchanged (error's base tones, the FAB's color role) versus corrected.
+
+---
+
 ## Rejected alternatives (summary)
 
 - **Bottom nav / tabs** — rejected as unnecessary chrome for an app with one real hub.
@@ -310,6 +372,8 @@ Exact values are in the `:root` block at the top of each mockup file — identic
 - **(New this revision) A labeled dropdown of common recheck intervals for Health check** (e.g., "6 months / 12 months / 2 years / Custom") — rejected in favor of a freely editable stepper; see §2a for the full reasoning — a curated shortlist reintroduces the "the app is telling you what's valid" problem one level down from a locked recommendation.
 - **(New this revision) A persistent disclaimer caption directly under the Health check interval field, as the primary mechanism for the "not medical advice" constraint** — rejected in favor of fixing the field's *container* (plain stepper, not a tinted callout) so the constraint is satisfied by what the field looks like, not only by a sentence a user learns to skip. See §2a.
 - **(New this revision) A second grouping layer splitting overdue vs. upcoming notifications within the same day's summary** — rejected as complexity for a rare double-collision; per-line status text inside the expanded group already disambiguates. See §6a.
+- **(New, dark theme pass) Naive light-to-dark inversion** (swap each pair's container/on-container and call it done) — rejected as the whole premise of this pass; every role was retoned from its own hue/chroma in Lab space instead. See §7a for why a literal inversion specifically fails for the warning role (reads as salmon, not amber) and for elevation (shadow-led cues don't survive the swap at all).
+- **(New, dark theme pass) A persistent disclaimer or badge distinguishing Health check's badge from Overdue's status dot, as the primary fix for the hue-proximity risk** — rejected as unnecessary once the hue itself was properly separated and verified under CVD simulation (§7a); the two already differ in form (icon, silhouette, position) and don't need a third signal bolted on for a risk that no longer measures as close.
 
 ---
 
@@ -318,8 +382,9 @@ Exact values are in the `:root` block at the top of each mockup file — identic
 1. **(Carried over, now resolved)** Custom's lead-time selector — accepted into scope; Short/Long values finalized in §2b.
 2. **(Carried over, now resolved)** Undo toast — accepted into scope; treatment in §4a.
 3. **(New)** §2's worst-case math note: grouping fully fixes same-day-clustering but not a staggered-across-the-week overdue pile-up. I'm not proposing to design further against the staggered case — flagging it so the team is choosing to accept it explicitly, not by omission.
-4. **(New)** The Health check category tint (dusty rose/berry) is the one color choice in this revision I'd most want a second look at — it's in the same warm-pink family as the error role, just at a different hue angle and lightness. Worth a deliberate glance side-by-side (mockup `00-index.html` swatches) rather than trusting my read of it alone.
+4. **(Resolved in the dark theme pass, 2026-08-21)** The Health check category tint's proximity to the error role — originally flagged in light as worth a colorblind check. I ran that check for the dark palette (§7a): hue separation from error increased from ~43° to ~56°, verified under simulated protanopia/deuteranopia (ΔE 56, well past the ΔE >10 "clearly distinguishable" threshold). Light's tint is unchanged and, on the same reasoning, was already far enough from error there not to need a hue change — only dark did. I'm treating this as closed; still worth a glance at `08-dark-theme.html`'s side-by-side swatches if anyone wants to sanity-check my read independently, but it's no longer an open question from my side.
 5. Does the free-tier reminder-timing table in §5 (deviating from a literal "single reminder ahead of due date" reading) match intent, or was a fixed single lead time actually preferred for simplicity? Still open from the original pass — unchanged by this amendment.
+6. **(New, dark theme pass)** Two bugs found in the *shared* theme code while doing this pass (not a dark-palette question, but adjacent) — `cardTheme` and `snackBarTheme` in `app_theme.dart` use light-appropriate role choices unconditionally for both schemes (§7a). I've specified the fix; routing to `developer` to confirm before/while applying the dark token table, since these affect how every other dark screen actually looks regardless of the palette values being correct.
 
 ---
 
@@ -333,6 +398,8 @@ Two items from the previous pass's table are now in scope (undo toast, Custom se
 | Home-screen summary line for paid users ("6 items · full ladder active") | Cheap, ongoing reminder of what was purchased, without another notification | Low–Medium |
 | A visible, persistent "N items overdue" count somewhere in the app icon/list header, distinct from any individual notification | If the team ever revisits the staggered-overdue-week gap noted in §2/§6a, an in-app aggregate view is a cheaper lever than more notification-side engineering — it moves the "catch up" moment into the app instead of the tray | Low, speculative — only worth it if the staggered-week gap turns out to matter in practice |
 | **(New 2026-08-21)** A one-time coach-mark hint for long-press-to-delete, shown the first time a card renders | Long-press is a well-established Android pattern but is inherently less discoverable than a visible icon; a first-use hint is the cheap mitigation if testing shows people don't find it (see §4b) — not designed here, flagged for triage | Low |
+| **(New, dark theme pass)** `qa-tester` re-verifies the Health check vs. error hue separation with a proper device-level CVD-simulation tool (e.g. Android Accessibility Scanner or a browser CVD emulation extension) against the actual rendered app, not just the token hex values | My simulation used a standard published matrix (Machado et al. 2009) against the palette in isolation — a strong signal, not a substitute for seeing it rendered on-device with real icon glyphs at real size | Low — I'm confident in the result, this is a cheap independent confirmation, not a sign something's wrong |
+| System (not just app) dark mode: verify the notification-tray mockups (`07-notifications.html`) against the OS's own dark notification shade styling, which this pass didn't touch | Notifications render in OS chrome the app doesn't control — grouped/expanded notification legibility in a dark shade wasn't part of this pass's scope (which was the in-app dark theme) and is worth a separate, smaller look | Low–Medium |
 
 ---
 
@@ -348,3 +415,4 @@ Two items from the previous pass's table are now in scope (undo toast, Custom se
 | Exact-alarm (conditional) | n/a | n/a | ✓ denied-recovery | ✓ granted |
 | Settings/Privacy | ✓ | n/a (static) | ✓ load failure | ✓ populated (broadened legal+medical disclaimer) |
 | Notification tray (new, `07-notifications.html`) | n/a | n/a | n/a | ✓ single stage (Mark done only, no Snooze), ✓ single overdue nag (Mark done only), ✓ grouped/collapsed, ✓ grouped/expanded |
+| **Dark theme (new, `08-dark-theme.html`)** | ✓ Home/List + Item detail skeletons | ✓ Home/List first-run (7 tiles) | ✓ Home/List read-failure, ✓ Item detail not-found | ✓ Home/List populated (all 4 statuses in one screen), ✓ Item detail free/paid/Health check, + elevation-fix demos (undo toast, overflow menu) |
