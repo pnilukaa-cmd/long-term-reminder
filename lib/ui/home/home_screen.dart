@@ -1,5 +1,7 @@
-import 'package:flutter/foundation.dart';
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart' as ph;
 
 import '../../data/database/notification_dao.dart';
 import '../../data/repository/renewal_repository.dart';
@@ -15,8 +17,8 @@ import '../add_edit/add_edit_screen.dart';
 import '../common/mark_done_sheet.dart';
 import '../common/undo_controller.dart';
 import '../common/undo_toast.dart';
-import '../debug/scheduled_state_debug_screen.dart';
 import '../detail/item_detail_screen.dart';
+import '../settings/settings_screen.dart';
 import 'widgets/empty_state_view.dart';
 import 'widgets/error_state_view.dart';
 import 'widgets/loading_state_view.dart';
@@ -40,9 +42,11 @@ class HomeScreen extends StatefulWidget {
 
   /// The three notification-layer dependencies are only used to (a)
   /// re-trigger reconciliation after every commit this screen makes to the
-  /// database (delete/mark-done, via [UndoController]) and (b) reach the
-  /// debug-only scheduled-state screen (task item 7) — this screen itself
-  /// never calls the plugin or the DAO directly beyond that.
+  /// database (delete/mark-done, via [UndoController]) and (b) thread
+  /// through to [SettingsScreen], which owns the debug-only scheduled-state
+  /// entry point (moved here from this app bar, developer task brief item
+  /// 6) — this screen itself never calls the plugin or the DAO directly
+  /// beyond that.
   final NotificationService notificationService;
   final NotificationDao notificationDao;
   final ReconciliationService reconciliationService;
@@ -98,8 +102,24 @@ class _HomeScreenState extends State<HomeScreen> {
     _undoController.scheduleDelete(item);
   }
 
+  /// Bug fix (developer task brief, "fix that race condition"): the denial
+  /// message used to be shown by `AddEditScreen` itself, fired in parallel
+  /// with that screen's own ~900ms auto-navigate-back-to-list delay after
+  /// save. If the OS permission dialog's result arrived after that
+  /// screen had already popped, the SnackBar had nowhere to render and the
+  /// message was silently lost — a real, not hypothetical, race (see
+  /// business-analyst's §0.8/REQ-11.1 revision).
+  ///
+  /// Fix: `AddEditScreen` now *awaits* the permission-priming flow before
+  /// it pops (see that file), and reports the outcome as this push's
+  /// result instead of showing the SnackBar itself. `Home` — which is
+  /// guaranteed to still be mounted the moment this `await` resolves,
+  /// since that's precisely the moment the pushed screen finishes popping
+  /// — shows the message from here instead. This removes the race
+  /// entirely rather than just narrowing the window: there's no longer a
+  /// second screen's lifetime for the result to outlive.
   Future<void> _openAddEdit({RenewalType? initialType}) async {
-    await Navigator.of(context).push(
+    final notificationPermissionDenied = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         builder: (context) => AddEditScreen(
           repository: widget.repository,
@@ -107,6 +127,24 @@ class _HomeScreenState extends State<HomeScreen> {
           notificationService: widget.notificationService,
           reconciliationService: widget.reconciliationService,
           initialType: initialType,
+        ),
+      ),
+    );
+    if (notificationPermissionDenied == true && mounted) {
+      _showNotificationDeniedMessage();
+    }
+  }
+
+  void _showNotificationDeniedMessage() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text(
+          "Notifications are off — you can still track everything here. "
+          'Enable them anytime in your phone settings.',
+        ),
+        action: SnackBarAction(
+          label: 'Open settings',
+          onPressed: () => unawaited(ph.openAppSettings()),
         ),
       ),
     );
@@ -128,12 +166,13 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _openDebugScreen() {
+  void _openSettings() {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => ScheduledStateDebugScreen(
+        builder: (context) => SettingsScreen(
           notificationDao: widget.notificationDao,
           notificationService: widget.notificationService,
+          reconciliationService: widget.reconciliationService,
         ),
       ),
     );
@@ -145,25 +184,14 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('Your renewals'),
         actions: [
-          // Task item 7 — debug-only entry point to the scheduled-state
-          // screen. `kDebugMode`-gated rather than routed through Settings
-          // (Settings itself is out of scope for this slice) so it's
-          // reachable during device testing without inventing a home for
-          // it that would need to be torn out before release.
-          if (kDebugMode)
-            IconButton(
-              icon: const Icon(Icons.bug_report_outlined),
-              tooltip: 'Scheduled state (debug)',
-              onPressed: _openDebugScreen,
-            ),
+          // Developer task brief item 6: the debug-only scheduled-state
+          // entry point (previously a `kDebugMode`-gated bug icon here)
+          // has moved into Settings — "the home app bar should not carry
+          // developer affordances."
           IconButton(
             icon: const Icon(Icons.settings_outlined),
             tooltip: 'Settings',
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Settings isn't built yet — coming in a later slice.")),
-              );
-            },
+            onPressed: _openSettings,
           ),
         ],
       ),

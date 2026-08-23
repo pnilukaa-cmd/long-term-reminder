@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:permission_handler/permission_handler.dart' as ph;
 
 import '../../data/repository/renewal_repository.dart';
 import '../../data/repository/settings_repository.dart';
@@ -181,17 +180,40 @@ class _AddEditScreenState extends State<AddEditScreen> {
       // slower for no visible benefit.
       unawaited(widget.reconciliationService.reconcile());
 
-      if (isFirstItemEver) {
-        unawaited(_primeNotificationPermission());
-      }
-
       if (!mounted) return;
       setState(() {
         _saving = false;
         _justSaved = true;
       });
+
+      // Bug fix (developer task brief, "fix that race condition" — see
+      // business-analyst's §0.8/REQ-11.1 revision): this used to be an
+      // `unawaited()` call racing against the fixed 900ms delay below,
+      // with *this screen* showing the denial SnackBar directly — so a
+      // slow or hesitant tap on the OS dialog could resolve after this
+      // screen had already popped, leaving the SnackBar nowhere to render
+      // and the message silently lost. Now awaited before the delay/pop,
+      // and it returns a plain outcome instead of showing anything itself;
+      // `HomeScreen._openAddEdit` shows the message once this screen has
+      // actually finished popping, from a screen that's guaranteed to
+      // still be mounted at that moment. See that method's own doc
+      // comment for the full before/after.
+      var notificationPermissionDenied = false;
+      if (isFirstItemEver) {
+        try {
+          notificationPermissionDenied = await _primeNotificationPermission();
+        } catch (_) {
+          // The item is already saved at this point — a failure asking
+          // for the permission (plugin error, etc.) must not be reported
+          // to the user as a failed *save*, and must not block the normal
+          // pop below. Nothing to recover: no permission-denied message
+          // is owed for an ask that never actually completed.
+          notificationPermissionDenied = false;
+        }
+      }
+
       await Future.delayed(const Duration(milliseconds: 900));
-      if (mounted) Navigator.of(context).pop();
+      if (mounted) Navigator.of(context).pop(notificationPermissionDenied);
     } catch (_) {
       if (!mounted) return;
       setState(() => _saving = false);
@@ -210,47 +232,23 @@ class _AddEditScreenState extends State<AddEditScreen> {
   /// three-panel priming flow (`05-permissions.html` p1–p3): this fires the
   /// real OS permission dialog directly (via
   /// `flutter_local_notifications`' Android 13+ API) rather than showing
-  /// this app's own priming screen first, and denial gets a single
-  /// SnackBar with an "Open settings" action rather than REQ-11.1's
-  /// dedicated recovery screen/copy. Flagged explicitly in the developer
-  /// handoff as the minimum-viable tier of that requirement, not the full
-  /// polish — REQ-11.1's own priming-screen visuals were not built this
-  /// slice.
+  /// this app's own priming screen first. REQ-11.1's own priming-screen
+  /// visuals are an accepted omission for v1 (§0.8) — not built.
   ///
-  /// Fired immediately after the save write completes (see the call site),
-  /// in parallel with the "Saved" confirmation and the ~900ms
-  /// auto-navigate-back-to-list delay already on this screen. **Known,
-  /// flagged rough edge**: because this screen auto-pops shortly after
-  /// save, the denial SnackBar below has a real chance of having nowhere
-  /// to render if the user is slow to respond to the OS dialog and the
-  /// screen has already navigated away by the time a decision comes back —
-  /// `mounted` guards prevent a crash, but the message can be silently
-  /// missed in that case. A more robust version would show that message
-  /// from Home (post-navigation) rather than from this screen; not built
-  /// this slice, flagged in the developer handoff.
-  Future<void> _primeNotificationPermission() async {
+  /// Awaited by [_handleSave] before this screen pops (see that method's
+  /// updated doc comment for why — this used to be `unawaited()`, racing
+  /// against the auto-navigate-back delay, which is the race condition
+  /// fixed as part of this slice). Returns `true` only when the user
+  /// actually denied the permission and a recovery message should be
+  /// shown once control is back on a screen that's guaranteed to still be
+  /// mounted — this screen deliberately no longer shows that message
+  /// itself; see `HomeScreen._openAddEdit`/`_showNotificationDeniedMessage`.
+  Future<bool> _primeNotificationPermission() async {
     final granted = await widget.notificationService.requestPermission();
     // `null` means no runtime prompt exists on this Android version at all
     // (below API 33) — nothing to recover from, notifications already work.
-    if (granted == null || granted == true) return;
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text(
-          "Notifications are off — you can still track everything here. "
-          'Enable them anytime in your phone settings.',
-        ),
-        action: SnackBarAction(
-          label: 'Open settings',
-          onPressed: () {
-            // permission_handler's settings deep-link — REQ-11.1's
-            // "Open notification settings" affordance, without building
-            // this app's own dedicated recovery screen this slice.
-            unawaited(ph.openAppSettings());
-          },
-        ),
-      ),
-    );
+    if (granted == null || granted == true) return false;
+    return true;
   }
 
   @override
