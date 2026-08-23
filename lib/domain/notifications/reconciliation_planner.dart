@@ -55,6 +55,20 @@ class ReconciliationPlanner {
   }) {
     if (item.isDone) return const [];
 
+    // Developer task brief item 3 / REQ-9.5: a notification-triggered
+    // `Mark done` on a recurring type has already cancelled this cycle's
+    // remaining nags directly (`NotificationActionHandler`), but leaves
+    // `dueDate`/`isDone` untouched on purpose — no recurrence decision has
+    // actually been made yet. Without this check, this planner would
+    // recompute the *same* still-due-dated stages from the unchanged due
+    // date and the very next reconciliation pass (which
+    // `NotificationActionHandler` itself triggers immediately after
+    // setting this flag) would silently re-arm the notifications that
+    // were just cancelled. Suppressed exactly like `isDone`, until item
+    // detail's deferred banner resolves the decision (which clears this
+    // flag via the ordinary [RenewalDao.markDone] path).
+    if (item.pendingRecurrenceDecision) return const [];
+
     final dueDate = dateOnly(item.dueDate);
     // Matches StatusCalculator's corrected overdue boundary exactly (see
     // that class's fix note) — a due date on or before today is Overdue,

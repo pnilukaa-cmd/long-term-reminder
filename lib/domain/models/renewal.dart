@@ -17,6 +17,10 @@ class Renewal {
     this.healthRecurrenceMonths,
     required this.isDone,
     this.lastCompletedAt,
+    this.pendingRecurrenceDecision = false,
+    this.hasUndoableCompletion = false,
+    this.preCompletionDueDate,
+    this.preCompletionLastCompletedAt,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -35,6 +39,27 @@ class Renewal {
 
   final bool isDone;
   final DateTime? lastCompletedAt;
+
+  /// REQ-9.5's deferred recurrence decision — see
+  /// `lib/data/database/tables.dart`'s doc comment on the underlying
+  /// column for the full contract. Drives item detail's inline banner.
+  final bool pendingRecurrenceDecision;
+
+  /// `Undo last completion` (scope doc §3d) — true iff the most recent
+  /// thing that happened to this item was a completed mark-done and
+  /// nothing has touched it since. Drives item detail's overflow-menu
+  /// entry.
+  final bool hasUndoableCompletion;
+
+  /// Snapshot restored by `Undo last completion` — only meaningful when
+  /// [hasUndoableCompletion] is true.
+  final DateTime? preCompletionDueDate;
+
+  /// Snapshot restored by `Undo last completion` — only meaningful when
+  /// [hasUndoableCompletion] is true (and may itself legitimately be
+  /// null even then, if this was the item's first-ever completion).
+  final DateTime? preCompletionLastCompletedAt;
+
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -48,6 +73,10 @@ class Renewal {
     int? healthRecurrenceMonths,
     bool? isDone,
     DateTime? lastCompletedAt,
+    bool? pendingRecurrenceDecision,
+    bool? hasUndoableCompletion,
+    DateTime? preCompletionDueDate,
+    DateTime? preCompletionLastCompletedAt,
     DateTime? updatedAt,
   }) {
     return Renewal(
@@ -60,6 +89,10 @@ class Renewal {
       healthRecurrenceMonths: healthRecurrenceMonths ?? this.healthRecurrenceMonths,
       isDone: isDone ?? this.isDone,
       lastCompletedAt: lastCompletedAt ?? this.lastCompletedAt,
+      pendingRecurrenceDecision: pendingRecurrenceDecision ?? this.pendingRecurrenceDecision,
+      hasUndoableCompletion: hasUndoableCompletion ?? this.hasUndoableCompletion,
+      preCompletionDueDate: preCompletionDueDate ?? this.preCompletionDueDate,
+      preCompletionLastCompletedAt: preCompletionLastCompletedAt ?? this.preCompletionLastCompletedAt,
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

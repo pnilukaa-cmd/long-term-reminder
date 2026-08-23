@@ -32,34 +32,41 @@ class NotificationActionHandler {
       // decision ("when's the next one due?") that this app only knows how
       // to ask through UI. Design doc §4 defers that question to an inline
       // banner on item detail — not a second notification — the next time
-      // the app is opened. **Item detail is out of scope for this slice**
-      // (see the developer task brief's explicit exclusions), so that
-      // deferred-decision banner does not exist yet.
+      // the app is opened.
       //
-      // What this method still does, matching REQ-9.5's other, buildable
-      // half exactly ("remaining scheduled stages for that item are
-      // cancelled immediately"): every still-pending notification for this
-      // item's current cycle is cancelled now, so a user who has already
-      // told the app (via the notification) that they've handled this
-      // doesn't keep getting nagged about it. `isDone`/`dueDate` are
-      // deliberately left untouched — flipping either without a real
-      // next-cycle decision would violate scope doc §3d's "Done is
-      // per-cycle, not per-item" rule (it would either wrongly park a
-      // recurring item in the terminal Done section, or silently invent a
-      // next due date nobody chose).
+      // **Resolved, not still a gap**: item detail now exists
+      // (`lib/ui/detail/item_detail_screen.dart`) and renders exactly that
+      // deferred banner when `pendingRecurrenceDecision` is true, reusing
+      // the same recurrence-sheet flow and the same [RenewalRepository
+      // .commitMarkDone] commit path every other mark-done goes through —
+      // see that screen's `_DeferredRecurrenceBanner`. What this handler
+      // does at notification-tap time is unchanged and still correct on
+      // its own terms: cancel every still-pending notification for this
+      // item's current cycle immediately (so a user who's told the app,
+      // via the notification, that they've handled this doesn't keep
+      // getting nagged), then mark the item as awaiting its recurrence
+      // decision rather than flipping `isDone`/`dueDate` here — this app
+      // still has no foreground UI surface at the moment a notification
+      // action fires (this handler runs identically whether the process
+      // is alive or was launched fresh into a background isolate — see
+      // `notification_background_handler.dart`), so the actual "when's it
+      // next due?" question genuinely cannot be asked from here. That is
+      // the deliberate, stated reason this path still can't complete the
+      // recurrence *itself* — it hands off to the one place that can.
       //
-      // **Named gap, not a silent drop**: until item detail's deferred
-      // banner exists, a recurring item marked done from a notification
-      // keeps showing its current (likely Overdue/Due soon) status on the
-      // list, and the user still needs to open the app and use the
-      // existing in-app Mark done flow to actually advance the cycle. See
-      // the developer handoff.
+      // `markPendingRecurrenceDecision` is also what stops the
+      // `reconciliationService.reconcile()` call at the end of this method
+      // from immediately re-arming the very notifications just cancelled
+      // above — see [ReconciliationPlanner]'s matching check. Without it,
+      // this cancel-then-reconcile sequence would silently undo itself in
+      // the same call.
       final rows = await notificationDao.getRowsForRenewal(renewalId);
       for (final row in rows) {
         if (row.status != 'pending') continue;
         await notificationService.cancel(row.id);
         await notificationDao.setStatus(row.id, 'cancelled');
       }
+      await renewalRepository.markPendingRecurrenceDecision(renewalId);
     }
 
     // Re-run reconciliation so DB/OS state converges immediately rather

@@ -10,6 +10,7 @@ Renewal _item({
   required DateTime dueDate,
   bool isDone = false,
   DateTime? lastCompletedAt,
+  bool pendingRecurrenceDecision = false,
 }) {
   final now = DateTime(2020, 1, 1);
   return Renewal(
@@ -19,6 +20,7 @@ Renewal _item({
     dueDate: dueDate,
     isDone: isDone,
     lastCompletedAt: lastCompletedAt,
+    pendingRecurrenceDecision: pendingRecurrenceDecision,
     createdAt: now,
     updatedAt: now,
   );
@@ -124,6 +126,39 @@ void main() {
       expect(plan, isEmpty);
     });
   });
+
+  group(
+    'ReconciliationPlanner.planFor — pendingRecurrenceDecision suppression '
+    '(developer task brief item 3 / REQ-9.5, resolving the recurring mark-done gap)',
+    () {
+      test(
+        'an item awaiting its deferred recurrence decision is never scheduled, '
+        'even though isDone is still false and the due date is unchanged',
+        () {
+          // This is exactly the state NotificationActionHandler leaves a
+          // recurring item in immediately after cancelling its remaining
+          // pending notifications: isDone still false, dueDate still the
+          // old (likely overdue) one, but pendingRecurrenceDecision now
+          // true. Without this suppression, the very next reconciliation
+          // pass (which that same handler triggers) would recompute and
+          // silently re-arm the notifications just cancelled.
+          final plan = ReconciliationPlanner.planFor(
+            items: [_item(dueDate: DateTime(2027, 1, 1), pendingRecurrenceDecision: true)],
+            now: DateTime(2027, 1, 5), // overdue — would otherwise get overdue nags
+          );
+          expect(plan, isEmpty);
+        },
+      );
+
+      test('the same item is scheduled normally again once the flag clears (banner resolved)', () {
+        final plan = ReconciliationPlanner.planFor(
+          items: [_item(dueDate: DateTime(2028, 1, 1))],
+          now: DateTime(2027, 1, 5),
+        );
+        expect(plan, isNotEmpty);
+      });
+    },
+  );
 
   group('ReconciliationPlanner.planFor — REQ-16.1 edit side effects, expressed as statelessness', () {
     test('editing a due date forward out of Overdue status stops overdue nags and resumes the ladder', () {

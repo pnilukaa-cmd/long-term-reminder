@@ -24,6 +24,7 @@ class RenewalCard extends StatelessWidget {
     required this.onLongPress,
     required this.onTapWhileRevealed,
     required this.onDelete,
+    required this.onOpenDetail,
   });
 
   final Renewal item;
@@ -42,6 +43,13 @@ class RenewalCard extends StatelessWidget {
   final VoidCallback onLongPress;
   final VoidCallback onTapWhileRevealed;
   final VoidCallback onDelete;
+
+  /// Design doc §3/§5: item detail is reached by tapping a card. Only
+  /// fires on a plain tap while the card is at rest — while revealed
+  /// (long-press contextual-selection state), a tap dismisses the reveal
+  /// instead ([onTapWhileRevealed]), matching the existing gesture rule
+  /// rather than adding a second, competing tap target.
+  final VoidCallback onOpenDetail;
 
   @override
   Widget build(BuildContext context) {
@@ -133,9 +141,19 @@ class RenewalCard extends StatelessWidget {
       ),
     );
 
+    // `isDimmed` (a *different* card is revealed) must also route to
+    // `onTapWhileRevealed`, not `onOpenDetail` — otherwise tapping any
+    // other card while one is held would navigate away instead of
+    // dismissing the reveal, since a non-null `onTap` here now always
+    // competes with (and, being more nested, normally beats) the list's
+    // own tap-anywhere-to-dismiss `GestureDetector` in the gesture arena.
+    // Before `onOpenDetail` existed, a non-revealed card's `onTap` was
+    // simply `null`, so no competing recognizer was ever registered and
+    // the outer dismiss-handler won uncontested — this restores that
+    // contextual-selection behaviour for the "at rest" case only.
     return GestureDetector(
       onLongPress: onLongPress,
-      onTap: isRevealed ? onTapWhileRevealed : null,
+      onTap: (isRevealed || isDimmed) ? onTapWhileRevealed : onOpenDetail,
       child: card,
     );
   }

@@ -26,12 +26,17 @@ class AppDatabase extends _$AppDatabase {
   /// executor so unit/widget tests don't touch the real filesystem.
   AppDatabase.forTesting(super.executor);
 
-  /// Bumped from 1 → 2 by this slice: adds `scheduled_notifications`
-  /// (`tables.dart`'s doc comment on that table has the full rationale).
-  /// No existing column on any table changed shape, so upgrading is
+  /// Bumped from 1 → 2 by the notification-scheduling slice (adds
+  /// `scheduled_notifications`) and from 2 → 3 by this slice: adds four
+  /// columns to `renewal_items` — `pending_recurrence_decision`,
+  /// `has_undoable_completion`, `pre_completion_due_date`,
+  /// `pre_completion_last_completed_at` (`tables.dart`'s doc comments on
+  /// those columns have the full rationale — the deferred
+  /// recurrence-decision banner and `Undo last completion`). No existing
+  /// column on any table changed shape, so both upgrades are
   /// additive-only — see [migration].
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -39,6 +44,12 @@ class AppDatabase extends _$AppDatabase {
         onUpgrade: (m, from, to) async {
           if (from < 2) {
             await m.createTable(scheduledNotifications);
+          }
+          if (from < 3) {
+            await m.addColumn(renewalItems, renewalItems.pendingRecurrenceDecision);
+            await m.addColumn(renewalItems, renewalItems.hasUndoableCompletion);
+            await m.addColumn(renewalItems, renewalItems.preCompletionDueDate);
+            await m.addColumn(renewalItems, renewalItems.preCompletionLastCompletedAt);
           }
         },
       );

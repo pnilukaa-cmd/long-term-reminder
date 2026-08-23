@@ -24,6 +24,12 @@ class RenewalRepository {
     return row == null ? null : _toDomain(row);
   }
 
+  /// Item detail's live single-item stream (REQ-5.1) — a `null` emission
+  /// (row deleted elsewhere while this screen is open) is exactly the
+  /// "item not found" error state, driven the same declarative,
+  /// stream-based way [watchAll] drives the list screen's four states.
+  Stream<Renewal?> watchById(int id) => _dao.watchItemById(id).map((row) => row == null ? null : _toDomain(row));
+
   /// A single current snapshot (as opposed to [watchAll]'s live stream) —
   /// what the reconciliation pass actually needs per run.
   Future<List<Renewal>> getAllOnce() async {
@@ -71,6 +77,18 @@ class RenewalRepository {
   /// absent-field behaviour to preserve it implicitly — cheap insurance
   /// against a subtle, hard-to-notice data bug in exactly the kind of
   /// write this project can't afford to get wrong silently.
+  ///
+  /// **Also invalidates both of scope doc §3d's single-level-undo
+  /// mechanisms**, per its explicit "invalidated by any subsequent edit"
+  /// rule: `hasUndoableCompletion`/its snapshot columns are always
+  /// cleared here, and so is `pendingRecurrenceDecision` — a manual edit
+  /// (e.g. picking a new due date directly) supersedes whatever deferred
+  /// recurrence question a notification-triggered mark-done left
+  /// outstanding, the same way it supersedes an undoable completion. This
+  /// is a deliberate, small extension of the letter of §3d (which names
+  /// `hasUndoableCompletion` specifically) to the same spirit for the
+  /// deferred-decision flag — flagged here since it's a developer
+  /// judgment call, not a directly-cited requirement.
   Future<void> updateItem({
     required int id,
     required RenewalType type,
@@ -94,6 +112,10 @@ class RenewalRepository {
         healthRecurrenceMonths: Value(healthRecurrenceMonths),
         isDone: Value(isDone),
         lastCompletedAt: Value(lastCompletedAt),
+        pendingRecurrenceDecision: const Value(false),
+        hasUndoableCompletion: const Value(false),
+        preCompletionDueDate: const Value(null),
+        preCompletionLastCompletedAt: const Value(null),
         createdAt: Value(createdAt),
         updatedAt: Value(DateTime.now()),
       ),
@@ -106,10 +128,23 @@ class RenewalRepository {
   Future<void> deleteItem(int id) => _dao.deleteItemById(id);
 
   /// Actually commits a mark-done action. Same "only call once the undo
-  /// window has lapsed" contract as [deleteItem].
+  /// window has lapsed" contract as [deleteItem]. Also the single path
+  /// `Undo last completion`'s snapshot is taken from — see
+  /// [RenewalDao.markDone].
   Future<void> commitMarkDone(int id, {DateTime? nextDueDate}) {
     return _dao.markDone(id, completedAt: DateTime.now(), nextDueDate: nextDueDate);
   }
+
+  /// REQ-9.5 / developer task brief item 3 — the notification-triggered
+  /// `Mark done` path on a recurring type, once its remaining pending
+  /// notifications have already been cancelled by the caller
+  /// (`NotificationActionHandler`). See [RenewalDao.markPendingRecurrenceDecision].
+  Future<void> markPendingRecurrenceDecision(int id) => _dao.markPendingRecurrenceDecision(id);
+
+  /// `Undo last completion` (scope doc §3d) — see
+  /// [RenewalDao.undoLastCompletion]. Returns `false` if there was
+  /// nothing undoable (already invalidated, or the item is gone).
+  Future<bool> undoLastCompletion(int id) => _dao.undoLastCompletion(id);
 
   Renewal _toDomain(RenewalItem row) {
     return Renewal(
@@ -122,6 +157,10 @@ class RenewalRepository {
       healthRecurrenceMonths: row.healthRecurrenceMonths,
       isDone: row.isDone,
       lastCompletedAt: row.lastCompletedAt,
+      pendingRecurrenceDecision: row.pendingRecurrenceDecision,
+      hasUndoableCompletion: row.hasUndoableCompletion,
+      preCompletionDueDate: row.preCompletionDueDate,
+      preCompletionLastCompletedAt: row.preCompletionLastCompletedAt,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     );

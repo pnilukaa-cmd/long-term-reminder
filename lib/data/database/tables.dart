@@ -36,6 +36,43 @@ class RenewalItems extends Table {
   /// card's "Renewed [date]" line.
   DateTimeColumn get lastCompletedAt => dateTime().nullable()();
 
+  /// REQ-9.5 / design doc §4's deferred recurrence decision, and the
+  /// developer task brief's "close the recurring mark-done gap": true
+  /// when a `Mark done` notification action on a *recurring* type has
+  /// already cancelled this cycle's remaining nags but the "when's it
+  /// next due?" question hasn't been answered yet (no foreground UI
+  /// existed at the moment the notification fired, per REQ-9.5). Item
+  /// detail surfaces this as an inline banner — never a second
+  /// notification — the next time it's opened; resolving it (via the same
+  /// recurrence flow every other mark-done uses) or manually editing the
+  /// item (which supersedes the deferred question) clears the flag.
+  ///
+  /// [ReconciliationPlanner] must treat this exactly like `isDone` — see
+  /// its class doc — or the very next reconciliation pass (which
+  /// `NotificationActionHandler` itself triggers right after setting this
+  /// flag) would recompute the same due-date-driven stages and silently
+  /// re-arm the ones that were just cancelled.
+  BoolColumn get pendingRecurrenceDecision => boolean().withDefault(const Constant(false))();
+
+  /// `Undo last completion` (scope doc §3d) — single-level undo of the
+  /// most recent mark-done *commit*, for a mistake noticed after the
+  /// 6-second undo toast has already expired. True iff the most recent
+  /// thing that happened to this item was a completed mark-done and
+  /// nothing has touched it since — another edit, another mark-done, or a
+  /// prior use of this same action all clear it (see [RenewalDao]).
+  BoolColumn get hasUndoableCompletion => boolean().withDefault(const Constant(false))();
+
+  /// Snapshot of `dueDate` immediately before the most recent mark-done
+  /// commit — only meaningful when [hasUndoableCompletion] is true; what
+  /// `Undo last completion` restores.
+  DateTimeColumn get preCompletionDueDate => dateTime().nullable()();
+
+  /// Snapshot of `lastCompletedAt` immediately before the most recent
+  /// mark-done commit — only meaningful when [hasUndoableCompletion] is
+  /// true. May itself legitimately be null (this being the item's very
+  /// first-ever completion).
+  DateTimeColumn get preCompletionLastCompletedAt => dateTime().nullable()();
+
   DateTimeColumn get createdAt => dateTime()();
 
   DateTimeColumn get updatedAt => dateTime()();

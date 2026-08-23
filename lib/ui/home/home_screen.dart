@@ -16,6 +16,7 @@ import '../common/mark_done_sheet.dart';
 import '../common/undo_controller.dart';
 import '../common/undo_toast.dart';
 import '../debug/scheduled_state_debug_screen.dart';
+import '../detail/item_detail_screen.dart';
 import 'widgets/empty_state_view.dart';
 import 'widgets/error_state_view.dart';
 import 'widgets/loading_state_view.dart';
@@ -111,6 +112,22 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// Design doc §3/§5 — tapping a card opens item detail (developer task
+  /// brief's "navigation from tapping a card on the home list").
+  Future<void> _openItemDetail(Renewal item) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ItemDetailScreen(
+          itemId: item.id,
+          repository: widget.repository,
+          settingsRepository: widget.settingsRepository,
+          notificationService: widget.notificationService,
+          reconciliationService: widget.reconciliationService,
+        ),
+      ),
+    );
+  }
+
   void _openDebugScreen() {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -180,6 +197,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     onTapWhileRevealed: _clearReveal,
                     onQuickDone: _handleQuickDone,
                     onDelete: _handleDelete,
+                    onOpenDetail: _openItemDetail,
                   ),
                 ),
                 Positioned(
@@ -222,6 +240,7 @@ class _SuccessList extends StatelessWidget {
     required this.onTapWhileRevealed,
     required this.onQuickDone,
     required this.onDelete,
+    required this.onOpenDetail,
   });
 
   final List<Renewal> items;
@@ -230,6 +249,7 @@ class _SuccessList extends StatelessWidget {
   final VoidCallback onTapWhileRevealed;
   final ValueChanged<Renewal> onQuickDone;
   final ValueChanged<Renewal> onDelete;
+  final ValueChanged<Renewal> onOpenDetail;
 
   @override
   Widget build(BuildContext context) {
@@ -275,6 +295,7 @@ class _SuccessList extends StatelessWidget {
                 onLongPress: () => onLongPress(item.id),
                 onTapWhileRevealed: onTapWhileRevealed,
                 onDelete: () => onDelete(item),
+                onOpenDetail: () => onOpenDetail(item),
               ),
           ],
       ],

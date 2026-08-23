@@ -34,6 +34,22 @@ class LadderOffset {
     return '$value $unitWord before';
   }
 
+  /// Compact form for item detail's ladder-track visualization (e.g.
+  /// "6mo", "1wk", "30d"), matching
+  /// `docs/design/mockups/03-item-detail.html`'s `.t-label` abbreviations
+  /// — distinct from [label], which is the longer form used in
+  /// notification copy and the list's "Next: …" chip.
+  String get shortLabel {
+    switch (unit) {
+      case OffsetUnit.days:
+        return '${value}d';
+      case OffsetUnit.weeks:
+        return '${value}wk';
+      case OffsetUnit.months:
+        return '${value}mo';
+    }
+  }
+
   String _unitWord(int value) {
     final singular = value == 1;
     switch (unit) {
