@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:long_term_reminder/domain/models/custom_tier.dart';
 import 'package:long_term_reminder/domain/models/renewal.dart';
 import 'package:long_term_reminder/domain/models/renewal_type.dart';
 import 'package:long_term_reminder/domain/notifications/notification_stage.dart';
@@ -11,6 +12,7 @@ Renewal _item({
   bool isDone = false,
   DateTime? lastCompletedAt,
   bool pendingRecurrenceDecision = false,
+  CustomTier? customTier,
 }) {
   final now = DateTime(2020, 1, 1);
   return Renewal(
@@ -21,6 +23,7 @@ Renewal _item({
     isDone: isDone,
     lastCompletedAt: lastCompletedAt,
     pendingRecurrenceDecision: pendingRecurrenceDecision,
+    customTier: customTier,
     createdAt: now,
     updatedAt: now,
   );
@@ -32,6 +35,7 @@ void main() {
       final plan = ReconciliationPlanner.planFor(
         items: [_item(dueDate: DateTime(2027, 7, 2))],
         now: DateTime(2027, 1, 1),
+        isEntitled: true,
       );
       // Vehicle: 30/14/3 days before.
       expect(plan.map((e) => e.stageKey), ['ladder:0', 'ladder:1', 'ladder:2']);
@@ -45,6 +49,7 @@ void main() {
       final plan = ReconciliationPlanner.planFor(
         items: [_item(dueDate: dueDate)],
         now: DateTime(2027, 6, 22),
+        isEntitled: true,
       );
       expect(plan.map((e) => e.stageKey), ['ladder:2']);
       expect(plan.single.fireOn, DateTime(2027, 6, 29));
@@ -54,6 +59,7 @@ void main() {
       final plan = ReconciliationPlanner.planFor(
         items: [_item(dueDate: DateTime(2027, 7, 2))],
         now: DateTime(2027, 7, 1), // 1 day before due — every stage has passed
+        isEntitled: true,
       );
       expect(plan, isEmpty);
     });
@@ -64,6 +70,7 @@ void main() {
       final plan = ReconciliationPlanner.planFor(
         items: [_item(type: RenewalType.warranty, dueDate: DateTime(2027, 1, 1))],
         now: DateTime(2027, 1, 1),
+        isEntitled: true,
       );
       expect(plan, hasLength(1));
       expect(plan.single.stageKey, 'overdue:0');
@@ -77,6 +84,7 @@ void main() {
       final plan = ReconciliationPlanner.planFor(
         items: [_item(dueDate: DateTime(2026, 1, 1))],
         now: DateTime(2026, 7, 1),
+        isEntitled: true,
       );
       expect(plan, hasLength(1), reason: 'only the clamped Day-0 nag should survive; +3/+10/+30 are all stale');
       expect(plan.single.stageKey, 'overdue:0');
@@ -89,6 +97,7 @@ void main() {
       final plan = ReconciliationPlanner.planFor(
         items: [_item(dueDate: DateTime(2027, 6, 1))],
         now: DateTime(2027, 6, 6),
+        isEntitled: true,
       );
       expect(plan.map((e) => e.stageKey), ['overdue:0', 'overdue:2', 'overdue:3']);
     });
@@ -97,6 +106,7 @@ void main() {
       final plan = ReconciliationPlanner.planFor(
         items: [_item(type: RenewalType.warranty, dueDate: DateTime(2027, 1, 1))],
         now: DateTime(2027, 6, 1), // Warranty only ever nags once, at Day 0
+        isEntitled: true,
       );
       expect(plan, isEmpty);
     });
@@ -112,6 +122,7 @@ void main() {
         final plan = ReconciliationPlanner.planFor(
           items: [_item(dueDate: DateTime(2028, 3, 21), lastCompletedAt: DateTime(2027, 3, 20))],
           now: DateTime(2027, 3, 21),
+          isEntitled: true,
         );
         expect(plan, isNotEmpty, reason: 'the next cycle must be scheduled normally, not suppressed');
         expect(plan.every((e) => e.kind == NotificationKind.ladderStage), isTrue);
@@ -122,6 +133,7 @@ void main() {
       final plan = ReconciliationPlanner.planFor(
         items: [_item(dueDate: DateTime(2020, 1, 1), isDone: true)],
         now: DateTime(2027, 1, 1),
+        isEntitled: true,
       );
       expect(plan, isEmpty);
     });
@@ -145,6 +157,7 @@ void main() {
           final plan = ReconciliationPlanner.planFor(
             items: [_item(dueDate: DateTime(2027, 1, 1), pendingRecurrenceDecision: true)],
             now: DateTime(2027, 1, 5), // overdue — would otherwise get overdue nags
+            isEntitled: true,
           );
           expect(plan, isEmpty);
         },
@@ -154,6 +167,7 @@ void main() {
         final plan = ReconciliationPlanner.planFor(
           items: [_item(dueDate: DateTime(2028, 1, 1))],
           now: DateTime(2027, 1, 5),
+          isEntitled: true,
         );
         expect(plan, isNotEmpty);
       });
@@ -169,12 +183,96 @@ void main() {
       final editedItem = _item(dueDate: DateTime(2027, 8, 1));
       final now = DateTime(2027, 1, 5);
 
-      final beforeEdit = ReconciliationPlanner.planFor(items: [overdueItem], now: now);
+      final beforeEdit = ReconciliationPlanner.planFor(items: [overdueItem], now: now, isEntitled: true);
       expect(beforeEdit.every((e) => e.kind == NotificationKind.overdueNag), isTrue);
 
-      final afterEdit = ReconciliationPlanner.planFor(items: [editedItem], now: now);
+      final afterEdit = ReconciliationPlanner.planFor(items: [editedItem], now: now, isEntitled: true);
       expect(afterEdit.every((e) => e.kind == NotificationKind.ladderStage), isTrue);
     });
+  });
+
+  group('ReconciliationPlanner.planFor — free/paid entitlement gating (REQ-3.2/3.3, this slice)', () {
+    test('a free-tier item pre-due gets exactly one stage, using the type-tuned free offset', () {
+      final plan = ReconciliationPlanner.planFor(
+        items: [_item(dueDate: DateTime(2027, 7, 6))],
+        now: DateTime(2027, 1, 1),
+        isEntitled: false,
+      );
+      // Vehicle's free reminder is 14 days before due (LadderTables.freeReminderOffset).
+      expect(plan, hasLength(1));
+      expect(plan.single.stageKey, 'free:0');
+      expect(plan.single.fireOn, DateTime(2027, 6, 22));
+    });
+
+    test('a free-tier item skips its single reminder if that date has already passed, same rule as paid', () {
+      final plan = ReconciliationPlanner.planFor(
+        items: [_item(dueDate: DateTime(2027, 6, 25))], // 14-day free stage would be Jun 11, already past
+        now: DateTime(2027, 6, 20),
+        isEntitled: false,
+      );
+      expect(plan, isEmpty);
+    });
+
+    test('a free-tier item that is overdue gets no notification at all — REQ-3.3 is explicit about this', () {
+      final plan = ReconciliationPlanner.planFor(
+        items: [_item(dueDate: DateTime(2027, 1, 1))],
+        now: DateTime(2027, 3, 1),
+        isEntitled: false,
+      );
+      expect(plan, isEmpty);
+    });
+
+    test('a paid-tier item gets the full ladder plus overdue nags — unaffected by the free-tier rules above', () {
+      final preDue = ReconciliationPlanner.planFor(
+        items: [_item(dueDate: DateTime(2027, 7, 6))],
+        now: DateTime(2027, 1, 1),
+        isEntitled: true,
+      );
+      expect(preDue, hasLength(3), reason: 'Vehicle: 30/14/3 days before, all paid stages');
+
+      final overdue = ReconciliationPlanner.planFor(
+        items: [_item(dueDate: DateTime(2027, 1, 1))],
+        now: DateTime(2027, 3, 1),
+        isEntitled: true,
+      );
+      expect(overdue, isNotEmpty, reason: 'paid overdue follow-through must still fire');
+    });
+
+    test("Custom's free reminder respects the selected tier, not a fixed default (REQ-2.5)", () {
+      final shortPlan = ReconciliationPlanner.planFor(
+        items: [_item(type: RenewalType.custom, customTier: CustomTier.short, dueDate: DateTime(2027, 7, 10))],
+        now: DateTime(2027, 1, 1),
+        isEntitled: false,
+      );
+      final longPlan = ReconciliationPlanner.planFor(
+        items: [_item(type: RenewalType.custom, customTier: CustomTier.long, dueDate: DateTime(2027, 7, 10))],
+        now: DateTime(2027, 1, 1),
+        isEntitled: false,
+      );
+      // Short's free reminder is 3 days before; Long's is 30 days before.
+      expect(shortPlan.single.fireOn, DateTime(2027, 7, 7));
+      expect(longPlan.single.fireOn, DateTime(2027, 6, 10));
+    });
+
+    test(
+      'REQ-14.2/17.3: the same item transitions cleanly between free and paid stage keys across two calls '
+      '(unlock or entitlement loss), never mixing a stale stageKey namespace',
+      () {
+        final free = ReconciliationPlanner.planFor(
+          items: [_item(dueDate: DateTime(2027, 7, 6))],
+          now: DateTime(2027, 1, 1),
+          isEntitled: false,
+        );
+        final paid = ReconciliationPlanner.planFor(
+          items: [_item(dueDate: DateTime(2027, 7, 6))],
+          now: DateTime(2027, 1, 1),
+          isEntitled: true,
+        );
+        expect(free.single.stageKey, 'free:0');
+        expect(paid.map((e) => e.stageKey), ['ladder:0', 'ladder:1', 'ladder:2']);
+        expect(free.map((e) => e.stageKey).toSet().intersection(paid.map((e) => e.stageKey).toSet()), isEmpty);
+      },
+    );
   });
 
   group('DesiredNotification.groupDateKey — REQ-12.1', () {
@@ -185,6 +283,7 @@ void main() {
           _item(id: 2, type: RenewalType.warranty, dueDate: DateTime(2027, 6, 1)),
         ],
         now: DateTime(2027, 6, 1),
+        isEntitled: true,
       );
       expect(plan, hasLength(2));
       expect(plan[0].groupDateKey, plan[1].groupDateKey);

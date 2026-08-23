@@ -5,11 +5,15 @@ import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart' as ph;
 
 import '../../data/database/notification_dao.dart';
+import '../../data/repository/entitlement_repository.dart';
+import '../../services/billing/billing_gateway.dart';
+import '../../services/billing/paywall_controller.dart';
 import '../../services/notifications/notification_service.dart';
 import '../../services/notifications/reconciliation_service.dart';
 import '../../theme/app_dimens.dart';
 import '../../theme/app_semantic_colors.dart';
 import '../debug/scheduled_state_debug_screen.dart';
+import '../paywall/paywall_screen.dart';
 import 'privacy_policy_constants.dart';
 import 'widgets/settings_disclaimer.dart';
 import 'widgets/settings_error_view.dart';
@@ -24,23 +28,19 @@ import 'widgets/settings_loading_view.dart';
 /// Reachable from the home screen's app-bar gear icon. Carries two
 /// required-before-ship legal surfaces — [SettingsDisclaimer] (REQ-1.4)
 /// and the privacy summary card below — plus the notification-permission
-/// recovery route (REQ-11.1) and the `kDebugMode`-gated scheduled-state
-/// debug entry point, moved here from the home app bar per the developer
-/// task brief item 6 ("the home app bar should not carry developer
-/// affordances").
-///
-/// **Out of scope for this slice** (per the task brief's explicit
-/// out-of-scope list — paywall/billing/free-paid gating): the mockup's
-/// "Purchase" group (`Full ladder` status, `Restore purchase`) is
-/// deliberately omitted rather than built as dead/non-functional UI —
-/// there is no entitlement model anywhere in this codebase yet for it to
-/// reflect honestly. See the developer handoff for the explicit flag.
+/// recovery route (REQ-11.1), the Purchase group (this slice — REQ-15.1's
+/// previously-omitted group, built honestly now that an entitlement model
+/// exists), and the `kDebugMode`-gated scheduled-state debug entry point,
+/// moved here from the home app bar per the developer task brief item 6
+/// ("the home app bar should not carry developer affordances").
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({
     super.key,
     required this.notificationDao,
     required this.notificationService,
     required this.reconciliationService,
+    required this.entitlementRepository,
+    required this.billingGateway,
     this.checkNotificationPermission,
   });
 
@@ -59,6 +59,13 @@ class SettingsScreen extends StatefulWidget {
   /// recovery, so it's the cheapest, most contained place to close that
   /// gap — not built as a general app-wide foreground-resume hook.
   final ReconciliationService reconciliationService;
+
+  /// Drives the Purchase group's live status, and its `Undo`-equivalent —
+  /// the `kDebugMode`-gated "reset entitlement" toggle that lets a human
+  /// exercise REQ-17.3's loss-of-entitlement path without a real purchase
+  /// (see the debug screen).
+  final EntitlementRepository entitlementRepository;
+  final BillingGateway billingGateway;
 
   /// Overridable for widget tests: `permission_handler`'s
   /// `Permission.notification.status` talks to a real platform channel
@@ -119,12 +126,73 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
     );
   }
 
+  /// `kDebugMode`-only — REQ-17.3 ("loss of paid entitlement") is
+  /// otherwise genuinely unverifiable in this project without a real Play
+  /// Console purchase that then somehow un-verifies itself. This lets a
+  /// human (developer or QA) flip the local entitlement flag straight to
+  /// `false` and watch the app degrade gracefully — item detail's ladder
+  /// track drops to locked markers, Add/Edit's preview drops to one
+  /// reminder, the next reconciliation pass cancels the now-ungated
+  /// notifications — with **no item data touched**, exactly as REQ-17.3
+  /// requires. Never reachable in a release build.
+  Future<void> _handleDebugResetEntitlement() async {
+    await widget.entitlementRepository.setEntitled(false);
+    await widget.reconciliationService.reconcile();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Entitlement reset — app now renders as free tier (debug only).')),
+    );
+  }
+
   void _handlePrivacyPolicyTap() {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text("The full privacy policy isn't hosted online yet — this will link out once it is."),
       ),
     );
+  }
+
+  void _openPaywall() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => PaywallScreen(
+          billingGateway: widget.billingGateway,
+          entitlementRepository: widget.entitlementRepository,
+          reconciliationService: widget.reconciliationService,
+        ),
+      ),
+    );
+  }
+
+  /// REQ-14.3 — "restore purchase... from paywall **or Settings**." This
+  /// deliberately doesn't navigate anywhere: it builds a short-lived
+  /// [PaywallController] purely to reuse its restore-with-timeout logic
+  /// (see that class's doc comment on why that logic lives there once,
+  /// not duplicated here), awaits a settled result, reports it via a
+  /// SnackBar, and throws the controller away — Settings has no dedicated
+  /// success-state screen mocked for this (only the paywall does), so a
+  /// SnackBar is the honest, minimal surface for this entry point.
+  Future<void> _handleRestoreFromSettings() async {
+    final controller = PaywallController(
+      billingGateway: widget.billingGateway,
+      entitlementRepository: widget.entitlementRepository,
+      reconciliationService: widget.reconciliationService,
+    );
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Checking for a previous purchase…'), duration: Duration(seconds: 30)),
+    );
+    final result = await controller.restoreAndAwaitResult();
+    controller.dispose();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    final message = switch (result) {
+      PaywallStatus.success => 'Restored — full ladder unlocked.',
+      PaywallStatus.error => controller.message ?? "Nothing to restore — you haven't unlocked this on this "
+          'Google account yet.',
+      PaywallStatus.pending => controller.message ?? 'Purchase pending — check back shortly.',
+      _ => "Couldn't check for a previous purchase — try again in a moment.",
+    };
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -143,9 +211,13 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
             }
             return _SettingsSuccessView(
               permissionStatus: snapshot.data!,
+              entitlementRepository: widget.entitlementRepository,
               onOpenNotificationSettings: _openSystemNotificationSettings,
               onOpenDebug: _openDebugScreen,
               onPrivacyPolicyTap: _handlePrivacyPolicyTap,
+              onOpenPaywall: _openPaywall,
+              onRestorePurchase: _handleRestoreFromSettings,
+              onDebugResetEntitlement: _handleDebugResetEntitlement,
             );
           },
         ),
@@ -157,15 +229,23 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
 class _SettingsSuccessView extends StatelessWidget {
   const _SettingsSuccessView({
     required this.permissionStatus,
+    required this.entitlementRepository,
     required this.onOpenNotificationSettings,
     required this.onOpenDebug,
     required this.onPrivacyPolicyTap,
+    required this.onOpenPaywall,
+    required this.onRestorePurchase,
+    required this.onDebugResetEntitlement,
   });
 
   final ph.PermissionStatus permissionStatus;
+  final EntitlementRepository entitlementRepository;
   final VoidCallback onOpenNotificationSettings;
   final VoidCallback onOpenDebug;
   final VoidCallback onPrivacyPolicyTap;
+  final VoidCallback onOpenPaywall;
+  final VoidCallback onRestorePurchase;
+  final VoidCallback onDebugResetEntitlement;
 
   @override
   Widget build(BuildContext context) {
@@ -182,6 +262,37 @@ class _SettingsSuccessView extends StatelessWidget {
               onTap: onOpenNotificationSettings,
             ),
           ],
+        ),
+
+        const _GroupLabel('Purchase'),
+        StreamBuilder<bool>(
+          stream: entitlementRepository.watchEntitled(),
+          initialData: false,
+          builder: (context, snapshot) {
+            final isEntitled = snapshot.data ?? false;
+            return _SettingsList(
+              children: [
+                isEntitled
+                    ? const _SettingsTile(
+                        icon: Icons.workspace_premium_outlined,
+                        title: 'Full ladder',
+                        subtitle: 'Active — every reminder stage, plus overdue follow-through',
+                      )
+                    : _SettingsTile(
+                        icon: Icons.lock_open_outlined,
+                        title: 'Unlock full ladder',
+                        subtitle: 'One-time purchase — escalating reminders plus overdue follow-through',
+                        onTap: onOpenPaywall,
+                      ),
+                _SettingsTile(
+                  icon: Icons.restore_outlined,
+                  title: 'Restore purchase',
+                  subtitle: 'Already bought this on another device? Restore it here',
+                  onTap: onRestorePurchase,
+                ),
+              ],
+            );
+          },
         ),
 
         const _GroupLabel('About'),
@@ -215,6 +326,12 @@ class _SettingsSuccessView extends StatelessWidget {
                 title: 'Scheduled state (debug)',
                 subtitle: "Diff this app's belief against the OS and the plugin",
                 onTap: onOpenDebug,
+              ),
+              _SettingsTile(
+                icon: Icons.money_off_outlined,
+                title: 'Reset entitlement (debug)',
+                subtitle: 'Exercise REQ-17.3 (loss of entitlement) without a real purchase',
+                onTap: onDebugResetEntitlement,
               ),
             ],
           ),

@@ -89,6 +89,22 @@ dependencies:
   # Same unverified-version caveat as every other addition in this block.
   permission_handler: ^11.3.1
 
+  # --- This slice's addition (paywall / billing) ---
+  # in_app_purchase: the official Flutter plugin, direct Play Billing —
+  # `CLAUDE.md`'s Stack section decision, overturning a prior RevenueCat
+  # default (single one-time non-consumable SKU doesn't need RevenueCat's
+  # cross-platform/subscription complexity). Same unverified-version
+  # caveat as every other addition in this file — no network access to
+  # pub.dev in this environment, no Flutter SDK to resolve/build against,
+  # and (the constraint specific to this package) no Play Console setup
+  # to actually exercise a purchase flow against. `lib/services/billing/`
+  # keeps every real call behind `BillingGateway` for exactly this reason
+  # — see `PlayBillingGateway`'s doc comment for the full list of what
+  # remains genuinely unverified. `in_app_purchase_android` is pulled in
+  # transitively; not pinned separately here unless a future issue
+  # requires it.
+  in_app_purchase: ^3.2.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

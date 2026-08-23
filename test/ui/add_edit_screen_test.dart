@@ -2,6 +2,7 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:long_term_reminder/data/database/app_database.dart';
+import 'package:long_term_reminder/data/repository/entitlement_repository.dart';
 import 'package:long_term_reminder/data/repository/renewal_repository.dart';
 import 'package:long_term_reminder/data/repository/settings_repository.dart';
 import 'package:long_term_reminder/services/notifications/notification_service.dart';
@@ -11,8 +12,12 @@ import 'package:long_term_reminder/ui/add_edit/add_edit_screen.dart';
 
 void main() {
   late AppDatabase database;
+  late EntitlementRepository entitlementRepository;
 
-  setUp(() => database = AppDatabase.forTesting(NativeDatabase.memory()));
+  setUp(() {
+    database = AppDatabase.forTesting(NativeDatabase.memory());
+    entitlementRepository = EntitlementRepository(database.settingsDao);
+  });
   tearDown(() => database.close());
 
   Widget buildScreen() {
@@ -29,11 +34,13 @@ void main() {
       home: AddEditScreen(
         repository: renewalRepository,
         settingsRepository: SettingsRepository(database.settingsDao),
+        entitlementRepository: entitlementRepository,
         notificationService: notificationService,
         reconciliationService: ReconciliationService(
           renewalRepository: renewalRepository,
           notificationDao: database.notificationDao,
           notificationService: notificationService,
+          entitlementRepository: entitlementRepository,
         ),
       ),
     );
@@ -83,4 +90,5 @@ void main() {
     expect(find.text('Medium'), findsOneWidget);
     expect(find.text('Long'), findsOneWidget);
   });
+
 }

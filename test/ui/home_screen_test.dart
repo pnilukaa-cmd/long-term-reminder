@@ -2,8 +2,10 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:long_term_reminder/data/database/app_database.dart';
+import 'package:long_term_reminder/data/repository/entitlement_repository.dart';
 import 'package:long_term_reminder/data/repository/renewal_repository.dart';
 import 'package:long_term_reminder/data/repository/settings_repository.dart';
+import 'package:long_term_reminder/services/billing/fake_billing_gateway.dart';
 import 'package:long_term_reminder/services/notifications/notification_service.dart';
 import 'package:long_term_reminder/services/notifications/reconciliation_service.dart';
 import 'package:long_term_reminder/theme/app_theme.dart';
@@ -25,18 +27,22 @@ void main() {
 
   Widget buildScreen() {
     final renewalRepository = RenewalRepository(database.renewalDao);
+    final entitlementRepository = EntitlementRepository(database.settingsDao);
     final notificationService = NotificationService();
     return MaterialApp(
       theme: AppTheme.light(),
       home: HomeScreen(
         repository: renewalRepository,
         settingsRepository: SettingsRepository(database.settingsDao),
+        entitlementRepository: entitlementRepository,
+        billingGateway: FakeBillingGateway(),
         notificationService: notificationService,
         notificationDao: database.notificationDao,
         reconciliationService: ReconciliationService(
           renewalRepository: renewalRepository,
           notificationDao: database.notificationDao,
           notificationService: notificationService,
+          entitlementRepository: entitlementRepository,
         ),
       ),
     );

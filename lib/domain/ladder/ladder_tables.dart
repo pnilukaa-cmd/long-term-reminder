@@ -6,14 +6,15 @@ import '../models/renewal_type.dart';
 /// docs/design/02-v1-design.md §2 / §2a / §2b and
 /// docs/requirements/03-v1-acceptance-criteria.md REQ-3.1/3.2/3.3.
 ///
-/// Entitlement/paywall gating (free vs. paid tier — REQ-3.2, REQ-14) is
-/// explicitly out of scope for this slice (no billing plugin exists yet).
-/// [paidLadderStages] is used throughout this slice's UI as "the ladder"
-/// for every item, since there is no free tier to distinguish from yet.
-/// [freeReminderOffset] is still implemented and unit-tested here because
-/// it's pure, cheap, and genuinely specified — it's just not wired into any
-/// UI gating in this slice. See the developer handoff notes for the
-/// explicit call-out.
+/// **Entitlement/paywall gating is wired in as of the billing slice** —
+/// [ReconciliationPlanner] (scheduling), `LadderTrackView`/`_LadderCard`
+/// (item detail's locked-stage rendering), and `LadderPreviewCard`
+/// (Add/Edit's live preview) all choose between [paidLadderStages] and
+/// [freeReminderOffset] based on a live entitlement read
+/// (`lib/data/repository/entitlement_repository.dart`), per REQ-3.1/3.2.
+/// This class itself stays a pure, entitlement-unaware data table — the
+/// gating decision is made by every *caller*, not here, matching
+/// `LadderTrack`'s own "gate the rendering, not the data" seam.
 class LadderTables {
   const LadderTables._();
 

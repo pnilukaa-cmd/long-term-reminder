@@ -4,6 +4,7 @@
 // widget test can run without a device/toolchain in this environment.
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:long_term_reminder/domain/ladder/ladder_tables.dart';
 import 'package:long_term_reminder/domain/ladder/ladder_track.dart';
 import 'package:long_term_reminder/domain/models/renewal_type.dart';
 
@@ -100,6 +101,37 @@ void main() {
         now: DateTime(2027, 1, 1),
       );
       expect(entries.last.date, DateTime(2027, 3, 21));
+    });
+  });
+
+  group('LadderTrack.build — offset carried through (developer task brief §5, the paywall-gating seam)', () {
+    test(
+      'always builds the full paid track regardless of entitlement — LadderTrack itself has no gating concept',
+      () {
+        // Vehicle: 30/14/3 days before — the full paid ladder, always.
+        final entries = LadderTrack.build(
+          type: RenewalType.vehicle,
+          dueDate: DateTime(2027, 7, 6),
+          now: DateTime(2027, 1, 1),
+        );
+        final stageOffsets = entries.where((e) => e.kind == LadderTrackEntryKind.stage).map((e) => e.offset).toList();
+        expect(stageOffsets, LadderTables.paidLadderStages(RenewalType.vehicle));
+      },
+    );
+
+    test('every stage entry carries its offset; today/due entries carry none', () {
+      final entries = LadderTrack.build(
+        type: RenewalType.warranty,
+        dueDate: DateTime(2027, 6, 1),
+        now: DateTime(2027, 1, 1),
+      );
+      for (final entry in entries) {
+        if (entry.kind == LadderTrackEntryKind.stage) {
+          expect(entry.offset, isNotNull);
+        } else {
+          expect(entry.offset, isNull);
+        }
+      }
     });
   });
 }

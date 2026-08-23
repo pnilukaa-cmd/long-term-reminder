@@ -14,8 +14,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:long_term_reminder/data/database/app_database.dart';
+import 'package:long_term_reminder/data/repository/entitlement_repository.dart';
 import 'package:long_term_reminder/data/repository/renewal_repository.dart';
 import 'package:long_term_reminder/data/repository/settings_repository.dart';
+import 'package:long_term_reminder/services/billing/fake_billing_gateway.dart';
 import 'package:long_term_reminder/services/notifications/notification_service.dart';
 import 'package:long_term_reminder/services/notifications/reconciliation_service.dart';
 import 'package:long_term_reminder/theme/app_theme.dart';
@@ -28,6 +30,7 @@ void main() {
 
     final renewalRepository = RenewalRepository(database.renewalDao);
     final settingsRepository = SettingsRepository(database.settingsDao);
+    final entitlementRepository = EntitlementRepository(database.settingsDao);
     // Never `.init()`-ed — this smoke test never triggers a save/delete/
     // mark-done, so these are only here to satisfy required constructor
     // parameters, same rationale as add_edit_screen_test.dart.
@@ -36,6 +39,7 @@ void main() {
       renewalRepository: renewalRepository,
       notificationDao: database.notificationDao,
       notificationService: notificationService,
+      entitlementRepository: entitlementRepository,
     );
 
     await tester.pumpWidget(
@@ -44,6 +48,8 @@ void main() {
         home: HomeScreen(
           repository: renewalRepository,
           settingsRepository: settingsRepository,
+          entitlementRepository: entitlementRepository,
+          billingGateway: FakeBillingGateway(),
           notificationService: notificationService,
           notificationDao: database.notificationDao,
           reconciliationService: reconciliationService,

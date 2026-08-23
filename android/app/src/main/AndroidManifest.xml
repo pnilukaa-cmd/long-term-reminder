@@ -15,6 +15,15 @@
          needs to briefly hold a wake lock to run its work reliably when
          the device would otherwise be asleep. -->
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
+    <!-- Not declared here on purpose: `com.android.vending.BILLING`, needed
+         for the paywall (this slice) — `in_app_purchase_android` (the
+         Android implementation the official `in_app_purchase` plugin pulls
+         in) declares and auto-merges this into the final manifest on its
+         own, the same way `flutter_local_notifications`/`permission_handler`
+         auto-merge `POST_NOTIFICATIONS` above. Documented here, not
+         declared, so it isn't silently forgotten as a possible first-build
+         gap if that auto-merge ever doesn't happen as expected —
+         unverified, since nothing in this project has actually been built. -->
     <application
         android:label="long_term_reminder"
         android:name="${applicationName}"

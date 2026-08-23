@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' show Value;
 
 import '../../data/database/app_database.dart';
 import '../../data/database/notification_dao.dart';
+import '../../data/repository/entitlement_repository.dart';
 import '../../data/repository/renewal_repository.dart';
 import '../../domain/models/date_math.dart';
 import '../../domain/notifications/notification_diff.dart';
@@ -25,20 +26,33 @@ class ReconciliationService {
     required RenewalRepository renewalRepository,
     required NotificationDao notificationDao,
     required NotificationService notificationService,
+    required EntitlementRepository entitlementRepository,
   })  : _renewalRepository = renewalRepository,
         _notificationDao = notificationDao,
-        _notificationService = notificationService;
+        _notificationService = notificationService,
+        _entitlementRepository = entitlementRepository;
 
   final RenewalRepository _renewalRepository;
   final NotificationDao _notificationDao;
   final NotificationService _notificationService;
+
+  /// The single global entitlement flag this whole reconciliation pass is
+  /// gated on (developer task brief §2 — "this is where the paywall
+  /// becomes real"). Read fresh on every [reconcile] call rather than
+  /// cached, so a purchase, a restore, or (REQ-17.3) a loss of
+  /// entitlement is picked up the moment the next reconciliation pass
+  /// runs — the same "recompute from scratch every time, trust nothing
+  /// remembered" principle [ReconciliationPlanner]'s own class doc already
+  /// states for edits/deletes/clock changes.
+  final EntitlementRepository _entitlementRepository;
 
   Future<void> reconcile({DateTime? now}) async {
     final effectiveNow = now ?? DateTime.now();
     final today = dateOnly(effectiveNow);
 
     final items = await _renewalRepository.getAllOnce();
-    final desired = ReconciliationPlanner.planFor(items: items, now: effectiveNow);
+    final isEntitled = await _entitlementRepository.isEntitled();
+    final desired = ReconciliationPlanner.planFor(items: items, now: effectiveNow, isEntitled: isEntitled);
     final existingRows = await _notificationDao.getAllRows();
 
     // Every id still present in the portfolio, terminal-`Done` items

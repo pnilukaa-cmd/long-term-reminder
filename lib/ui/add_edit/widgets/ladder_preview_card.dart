@@ -2,21 +2,28 @@ import 'package:flutter/material.dart';
 
 import '../../../domain/ladder/ladder_tables.dart';
 import '../../../domain/models/custom_tier.dart';
+import '../../../domain/models/ladder_offset.dart';
 import '../../../domain/models/renewal_type.dart';
 import '../../../theme/app_dimens.dart';
 
 /// The live-updating ladder preview card, matching `.ladder-preview`
-/// across the mockups — REQ-2.3.
+/// across the mockups — REQ-2.3, and (this slice) REQ-2.3's gating clause:
+/// "free tier shows only its single tuned reminder." [isEntitled] decides
+/// which stage list is shown; the live-updates-as-you-type behavior
+/// (REQ-2.3's Custom-selector requirement) is unaffected either way.
 class LadderPreviewCard extends StatelessWidget {
-  const LadderPreviewCard({super.key, required this.type, this.customTier});
+  const LadderPreviewCard({super.key, required this.type, this.customTier, required this.isEntitled});
 
   final RenewalType type;
   final CustomTier? customTier;
+  final bool isEntitled;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final stages = LadderTables.paidLadderStages(type, customTier: customTier);
+    final stages = isEntitled
+        ? LadderTables.paidLadderStages(type, customTier: customTier)
+        : <LadderOffset>[LadderTables.freeReminderOffset(type, customTier: customTier)];
 
     return Container(
       margin: const EdgeInsets.only(top: AppSpacing.sp5),
@@ -33,14 +40,14 @@ class LadderPreviewCard extends StatelessWidget {
               Icon(Icons.notifications_active_outlined, size: 15, color: scheme.onPrimaryContainer),
               const SizedBox(width: 6),
               Text(
-                'Reminders scheduled',
+                isEntitled ? 'Reminders scheduled' : 'Reminder scheduled (free plan)',
                 style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: scheme.onPrimaryContainer),
               ),
             ],
           ),
           const SizedBox(height: 6),
           Text(
-            _description(stages.length),
+            isEntitled ? _description(stages.length) : _freeDescription,
             style: TextStyle(fontSize: 12, color: scheme.onPrimaryContainer.withValues(alpha: .85), height: 1.5),
           ),
           const SizedBox(height: 8),
@@ -66,6 +73,14 @@ class LadderPreviewCard extends StatelessWidget {
       ),
     );
   }
+
+  // REQ-2.3's gated case: exactly one stage, no escalation, no overdue
+  // follow-through (REQ-3.2/3.3) — kept as its own fixed string rather
+  // than routed through [_description] so it can't accidentally drift
+  // into implying a follow-up that free tier doesn't get.
+  static const String _freeDescription =
+      "You'll get this one reminder before the due date — no escalation, no overdue follow-up. Unlock the full "
+      'ladder for the complete countdown.';
 
   /// Six of seven types' explanatory copy isn't independently
   /// BA-finalized yet (acceptance criteria §15 explicitly defers this as

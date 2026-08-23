@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../data/repository/entitlement_repository.dart';
 import '../../data/repository/renewal_repository.dart';
 import '../../data/repository/settings_repository.dart';
 import '../../domain/format/relative_date.dart';
@@ -16,7 +17,8 @@ import 'widgets/health_check_fields.dart';
 import 'widgets/ladder_preview_card.dart';
 import 'widgets/type_selector.dart';
 
-/// Add/Edit item — REQ-2. Creation is reachable from the home screen's FAB
+/// Add/Edit item — REQ-2, including REQ-2.3's free/paid-gated ladder
+/// preview (this slice). Creation is reachable from the home screen's FAB
 /// and empty-state tiles this slice; [existingItem] is supported for edit
 /// so the screen is ready for item detail's "Edit" button in a later
 /// slice, but nothing in *this* slice's UI navigates here with an
@@ -26,6 +28,7 @@ class AddEditScreen extends StatefulWidget {
     super.key,
     required this.repository,
     required this.settingsRepository,
+    required this.entitlementRepository,
     required this.notificationService,
     required this.reconciliationService,
     this.initialType,
@@ -34,6 +37,9 @@ class AddEditScreen extends StatefulWidget {
 
   final RenewalRepository repository;
   final SettingsRepository settingsRepository;
+
+  /// Drives the live ladder preview's free/paid gating (REQ-2.3).
+  final EntitlementRepository entitlementRepository;
 
   /// Task brief items 1/6: after a successful save, this screen (a)
   /// re-runs reconciliation so the new/edited item's schedule is armed
@@ -338,7 +344,15 @@ class _AddEditScreenState extends State<AddEditScreen> {
                     ),
 
                     if (_type != null && _dueDate != null)
-                      LadderPreviewCard(type: _type!, customTier: _type == RenewalType.custom ? _customTier : null),
+                      StreamBuilder<bool>(
+                        stream: widget.entitlementRepository.watchEntitled(),
+                        initialData: false,
+                        builder: (context, snapshot) => LadderPreviewCard(
+                          type: _type!,
+                          customTier: _type == RenewalType.custom ? _customTier : null,
+                          isEntitled: snapshot.data ?? false,
+                        ),
+                      ),
                   ],
                 ),
               ),

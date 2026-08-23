@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../../data/database/app_database.dart';
+import '../../data/repository/entitlement_repository.dart';
 import '../../data/repository/renewal_repository.dart';
 import 'notification_action_handler.dart';
 import 'notification_action_ids.dart';
@@ -46,6 +47,7 @@ Future<void> _run(int renewalId) async {
   final database = AppDatabase();
   try {
     final renewalRepository = RenewalRepository(database.renewalDao);
+    final entitlementRepository = EntitlementRepository(database.settingsDao);
     final notificationService = NotificationService();
     // No `onMarkDoneWhileAlive` callback here — this isolate has no live
     // app instance for one to call back into; the work happens directly
@@ -55,6 +57,7 @@ Future<void> _run(int renewalId) async {
       renewalRepository: renewalRepository,
       notificationDao: database.notificationDao,
       notificationService: notificationService,
+      entitlementRepository: entitlementRepository,
     );
     await NotificationActionHandler.handleMarkDone(
       renewalId: renewalId,

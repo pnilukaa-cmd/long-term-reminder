@@ -4,12 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart' as ph;
 
 import '../../data/database/notification_dao.dart';
+import '../../data/repository/entitlement_repository.dart';
 import '../../data/repository/renewal_repository.dart';
 import '../../data/repository/settings_repository.dart';
 import '../../domain/models/renewal.dart';
 import '../../domain/models/renewal_status.dart';
 import '../../domain/models/renewal_type.dart';
 import '../../domain/status/status_calculator.dart';
+import '../../services/billing/billing_gateway.dart';
 import '../../services/notifications/notification_service.dart';
 import '../../services/notifications/reconciliation_service.dart';
 import '../../theme/app_dimens.dart';
@@ -32,6 +34,8 @@ class HomeScreen extends StatefulWidget {
     super.key,
     required this.repository,
     required this.settingsRepository,
+    required this.entitlementRepository,
+    required this.billingGateway,
     required this.notificationService,
     required this.notificationDao,
     required this.reconciliationService,
@@ -39,6 +43,13 @@ class HomeScreen extends StatefulWidget {
 
   final RenewalRepository repository;
   final SettingsRepository settingsRepository;
+
+  /// Threaded through to every screen that needs to render or act on
+  /// free/paid gating (Add/Edit, item detail, Settings) — this screen
+  /// itself has no free/paid-gated content of its own (scope doc §2:
+  /// tracking/the list is never gated).
+  final EntitlementRepository entitlementRepository;
+  final BillingGateway billingGateway;
 
   /// The three notification-layer dependencies are only used to (a)
   /// re-trigger reconciliation after every commit this screen makes to the
@@ -124,6 +135,7 @@ class _HomeScreenState extends State<HomeScreen> {
         builder: (context) => AddEditScreen(
           repository: widget.repository,
           settingsRepository: widget.settingsRepository,
+          entitlementRepository: widget.entitlementRepository,
           notificationService: widget.notificationService,
           reconciliationService: widget.reconciliationService,
           initialType: initialType,
@@ -159,6 +171,8 @@ class _HomeScreenState extends State<HomeScreen> {
           itemId: item.id,
           repository: widget.repository,
           settingsRepository: widget.settingsRepository,
+          entitlementRepository: widget.entitlementRepository,
+          billingGateway: widget.billingGateway,
           notificationService: widget.notificationService,
           reconciliationService: widget.reconciliationService,
         ),
@@ -173,6 +187,8 @@ class _HomeScreenState extends State<HomeScreen> {
           notificationDao: widget.notificationDao,
           notificationService: widget.notificationService,
           reconciliationService: widget.reconciliationService,
+          entitlementRepository: widget.entitlementRepository,
+          billingGateway: widget.billingGateway,
         ),
       ),
     );

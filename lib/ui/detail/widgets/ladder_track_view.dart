@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../domain/format/relative_date.dart';
 import '../../../domain/ladder/ladder_track.dart';
+import '../../../domain/models/ladder_offset.dart';
 import '../../../theme/app_dimens.dart';
 
 /// The horizontal ladder-track timeline, matching `.track` across
@@ -9,13 +10,22 @@ import '../../../theme/app_dimens.dart';
 /// app's core differentiator, surfaced at the moment it matters most (design
 /// doc §3).
 ///
-/// Renders every entry unlocked (see [LadderTrack]'s class doc on the
-/// paywall-gating seam) — there is deliberately no `.t-dot.locked`
-/// treatment here yet.
+/// [LadderTrack.build] itself always produces the full, unlocked paid
+/// track (see that class's doc on the gating seam) — the locked/unlocked
+/// decision is made entirely here, by comparing each stage's
+/// [LadderTrackEntry.offset] against [freeOffset]. Pass `null` for
+/// [freeOffset] (paid tier, or entitlement still loading) to render every
+/// stage unlocked, exactly as before this slice.
 class LadderTrackView extends StatelessWidget {
-  const LadderTrackView({super.key, required this.entries});
+  const LadderTrackView({super.key, required this.entries, this.freeOffset});
 
   final List<LadderTrackEntry> entries;
+
+  /// REQ-3.2 — the one stage a free-tier user actually gets, per
+  /// `LadderTables.freeReminderOffset`. Every other `stage`-kind entry
+  /// renders as a locked marker in its correct chronological position when
+  /// this is non-null, matching `03-item-detail.html` panel p3.
+  final LadderOffset? freeOffset;
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +44,15 @@ class LadderTrackView extends StatelessWidget {
           ),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: [for (final entry in entries) Expanded(child: _TrackItem(entry: entry))],
+            children: [
+              for (final entry in entries)
+                Expanded(
+                  child: _TrackItem(
+                    entry: entry,
+                    isLocked: freeOffset != null && entry.kind == LadderTrackEntryKind.stage && entry.offset != freeOffset,
+                  ),
+                ),
+            ],
           ),
         ],
       ),
@@ -43,9 +61,10 @@ class LadderTrackView extends StatelessWidget {
 }
 
 class _TrackItem extends StatelessWidget {
-  const _TrackItem({required this.entry});
+  const _TrackItem({required this.entry, required this.isLocked});
 
   final LadderTrackEntry entry;
+  final bool isLocked;
 
   @override
   Widget build(BuildContext context) {
@@ -82,6 +101,21 @@ class _TrackItem extends StatelessWidget {
         );
 
       case LadderTrackEntryKind.stage:
+        // Locked always wins over fired/next — a locked stage was never
+        // actually scheduled for a free-tier user, so it must never read
+        // as "already fired," even if its date has passed (REQ-3.2, matching
+        // `03-item-detail.html` panel p3's free-tier 6-month stage, which
+        // renders locked, not checked, despite being in the past).
+        if (isLocked) {
+          return _Dot(
+            background: scheme.surfaceContainerHigh,
+            border: scheme.outlineVariant,
+            iconColor: scheme.outline,
+            icon: Icons.lock_outline,
+            label: entry.label,
+            date: entry.date,
+          );
+        }
         if (entry.fired) {
           return _Dot(
             background: scheme.primary,

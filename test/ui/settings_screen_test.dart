@@ -2,7 +2,9 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:long_term_reminder/data/database/app_database.dart';
+import 'package:long_term_reminder/data/repository/entitlement_repository.dart';
 import 'package:long_term_reminder/data/repository/renewal_repository.dart';
+import 'package:long_term_reminder/services/billing/fake_billing_gateway.dart';
 import 'package:long_term_reminder/services/notifications/notification_service.dart';
 import 'package:long_term_reminder/services/notifications/reconciliation_service.dart';
 import 'package:long_term_reminder/theme/app_theme.dart';
@@ -27,11 +29,13 @@ void main() {
 
   Widget buildScreen({required Future<ph.PermissionStatus> Function() checker}) {
     final renewalRepository = RenewalRepository(database.renewalDao);
+    final entitlementRepository = EntitlementRepository(database.settingsDao);
     final notificationService = NotificationService();
     final reconciliationService = ReconciliationService(
       renewalRepository: renewalRepository,
       notificationDao: database.notificationDao,
       notificationService: notificationService,
+      entitlementRepository: entitlementRepository,
     );
     return MaterialApp(
       theme: AppTheme.light(),
@@ -39,6 +43,8 @@ void main() {
         notificationDao: database.notificationDao,
         notificationService: notificationService,
         reconciliationService: reconciliationService,
+        entitlementRepository: entitlementRepository,
+        billingGateway: FakeBillingGateway(),
         checkNotificationPermission: checker,
       ),
     );
@@ -118,5 +124,64 @@ void main() {
     // `flutter test` runs in debug mode, so `kDebugMode` is true here —
     // this exercises the same gate a real debug build would.
     expect(find.text('Scheduled state (debug)'), findsOneWidget);
+  });
+
+  group('Purchase group (this slice, REQ-15.1) — previously omitted, now built', () {
+    testWidgets('a not-yet-entitled install shows an Unlock tile, not a false "Active" status', (tester) async {
+      await tester.pumpWidget(buildScreen(checker: () async => ph.PermissionStatus.granted));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Unlock full ladder'), findsOneWidget);
+      expect(find.text('Full ladder'), findsNothing);
+      expect(find.text('Restore purchase'), findsOneWidget);
+    });
+
+    testWidgets('an entitled install shows the Active status, not the Unlock tile', (tester) async {
+      final database = AppDatabase.forTesting(NativeDatabase.memory());
+      addTearDown(database.close);
+      final entitlementRepository = EntitlementRepository(database.settingsDao);
+      await entitlementRepository.setEntitled(true);
+      final renewalRepository = RenewalRepository(database.renewalDao);
+      final notificationService = NotificationService();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          home: SettingsScreen(
+            notificationDao: database.notificationDao,
+            notificationService: notificationService,
+            reconciliationService: ReconciliationService(
+              renewalRepository: renewalRepository,
+              notificationDao: database.notificationDao,
+              notificationService: notificationService,
+              entitlementRepository: entitlementRepository,
+            ),
+            entitlementRepository: entitlementRepository,
+            billingGateway: FakeBillingGateway(),
+            checkNotificationPermission: () async => ph.PermissionStatus.granted,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Full ladder'), findsOneWidget);
+      expect(find.textContaining('Active'), findsOneWidget);
+      expect(find.text('Unlock full ladder'), findsNothing);
+      // Restore purchase is always offered, even when already entitled —
+      // REQ-14.3 doesn't gate it on tier, and it's a safe, idempotent
+      // action either way.
+      expect(find.text('Restore purchase'), findsOneWidget);
+    });
+
+    testWidgets('tapping "Unlock full ladder" opens the paywall screen', (tester) async {
+      await tester.pumpWidget(buildScreen(checker: () async => ph.PermissionStatus.granted));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Unlock full ladder'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text('Unlock the full ladder'), findsOneWidget, reason: 'the paywall screen itself');
+    });
   });
 }

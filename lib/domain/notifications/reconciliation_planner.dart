@@ -30,7 +30,13 @@ class ReconciliationPlanner {
   const ReconciliationPlanner._();
 
   /// The full desired-notification set across every item in [items], as
-  /// of [now]. Terminal-`Done` items ([Renewal.isDone] `== true`)
+  /// of [now] — **this is where the paywall becomes real** (developer task
+  /// brief §2): [isEntitled] is a single, global flag (this app has one
+  /// SKU, not per-item entitlement) that decides, per item, whether the
+  /// full paid ladder + overdue follow-through is desired (REQ-3.1/3.3) or
+  /// only the single type-tuned free reminder with no overdue nag at all
+  /// (REQ-3.2/3.3's explicit "no overdue nag fires at all" rule for free
+  /// items). Terminal-`Done` items ([Renewal.isDone] `== true`)
   /// contribute nothing — see the invariant documented on
   /// [RenewalDao.markDone] this depends on: `isDone` is only ever true
   /// for a genuinely terminal outcome, never for a recurring item
@@ -40,11 +46,12 @@ class ReconciliationPlanner {
   static List<DesiredNotification> planFor({
     required List<Renewal> items,
     required DateTime now,
+    required bool isEntitled,
   }) {
     final today = dateOnly(now);
     final result = <DesiredNotification>[];
     for (final item in items) {
-      result.addAll(_planForItem(item: item, today: today));
+      result.addAll(_planForItem(item: item, today: today, isEntitled: isEntitled));
     }
     return result;
   }
@@ -52,6 +59,7 @@ class ReconciliationPlanner {
   static List<DesiredNotification> _planForItem({
     required Renewal item,
     required DateTime today,
+    required bool isEntitled,
   }) {
     if (item.isDone) return const [];
 
@@ -77,13 +85,22 @@ class ReconciliationPlanner {
     // list while receiving an overdue Day-0 nag, or vice versa.
     final overdue = !dueDate.isAfter(today);
 
-    return overdue
-        ? _overdueStages(item: item, dueDate: dueDate, today: today)
-        : _ladderStages(item: item, dueDate: dueDate, today: today);
+    if (overdue) {
+      // REQ-3.3: "no overdue nag fires at all" for a free-tier item — the
+      // list's own status computation is untouched by this (status is
+      // never gated, only the notification is — see StatusCalculator,
+      // which has no entitlement parameter at all).
+      if (!isEntitled) return const [];
+      return _overdueStages(item: item, dueDate: dueDate, today: today);
+    }
+
+    return isEntitled
+        ? _ladderStages(item: item, dueDate: dueDate, today: today)
+        : _freeStage(item: item, dueDate: dueDate, today: today);
   }
 
-  /// REQ-3.1 — pre-due ladder stages. A stage whose date has already
-  /// passed relative to [today] is silently skipped, never fired
+  /// REQ-3.1 — pre-due ladder stages (paid only). A stage whose date has
+  /// already passed relative to [today] is silently skipped, never fired
   /// retroactively (REQ-3.1, REQ-17.1).
   static List<DesiredNotification> _ladderStages({
     required Renewal item,
@@ -103,19 +120,43 @@ class ReconciliationPlanner {
     return result;
   }
 
+  /// REQ-3.2 — the single type-tuned free reminder. Same "silently skip if
+  /// already in the past relative to [today]" rule as the paid ladder
+  /// (REQ-3.1/17.1) — there's exactly one candidate stage here instead of
+  /// several, but the rule is the same rule, not a special case. Uses a
+  /// `stageKey` namespace (`free:0`) disjoint from `ladder:N`/`overdue:N`
+  /// so [NotificationDiffEngine] never confuses a free-tier occurrence
+  /// with a paid ladder stage that happens to share an index — matters
+  /// specifically for REQ-14.2 (unlock) and REQ-17.3 (entitlement loss),
+  /// where the same item transitions between this branch and
+  /// [_ladderStages] across reconciliation runs and the diff engine must
+  /// correctly treat that as "this stageKey dropped out, that one showed
+  /// up" rather than silently reusing a stale row.
+  static List<DesiredNotification> _freeStage({
+    required Renewal item,
+    required DateTime dueDate,
+    required DateTime today,
+  }) {
+    final offset = LadderTables.freeReminderOffset(item.type, customTier: item.customTier);
+    final stageDate = dateOnly(offset.dateBefore(dueDate));
+    if (stageDate.isBefore(today)) return const [];
+    return [_ladderEntry(item: item, dueDate: dueDate, offset: offset, stageDate: stageDate, index: 0, freeTier: true)];
+  }
+
   static DesiredNotification _ladderEntry({
     required Renewal item,
     required DateTime dueDate,
     required LadderOffset offset,
     required DateTime stageDate,
     required int index,
+    bool freeTier = false,
   }) {
     return DesiredNotification(
       renewalId: item.id,
       renewalType: item.type,
       itemLabel: item.label,
       kind: NotificationKind.ladderStage,
-      stageKey: 'ladder:$index',
+      stageKey: freeTier ? 'free:$index' : 'ladder:$index',
       fireOn: stageDate,
       title: NotificationCopy.ladderStageTitle(item.label, offset),
       body: NotificationCopy.ladderStageBody(item.type, dueDate),
@@ -127,12 +168,13 @@ class ReconciliationPlanner {
     );
   }
 
-  /// REQ-3.3 — overdue follow-through (paid ladder only; this slice, like
-  /// the rest of the codebase, has no free/paid distinction wired in yet
-  /// — see `LadderTables`' own class doc). REQ-17.1's one asymmetric
-  /// rule: the Day-0 nag always fires "immediately" (clamped forward to
-  /// [today]) even if the due date is deeply in the past — every later
-  /// stage follows the normal skip-if-already-past rule.
+  /// REQ-3.3 — overdue follow-through, paid tier only (the caller,
+  /// [_planForItem], never reaches this function for a free-tier item —
+  /// see REQ-3.3's explicit "no overdue nag fires at all" rule, handled
+  /// one level up). REQ-17.1's one asymmetric rule: the Day-0 nag always
+  /// fires "immediately" (clamped forward to [today]) even if the due
+  /// date is deeply in the past — every later stage follows the normal
+  /// skip-if-already-past rule.
   static List<DesiredNotification> _overdueStages({
     required Renewal item,
     required DateTime dueDate,

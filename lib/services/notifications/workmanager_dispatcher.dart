@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:workmanager/workmanager.dart';
 
 import '../../data/database/app_database.dart';
+import '../../data/repository/entitlement_repository.dart';
 import '../../data/repository/renewal_repository.dart';
 import 'notification_service.dart';
 import 'reconciliation_service.dart';
@@ -49,12 +50,14 @@ void callbackDispatcher() {
     final database = AppDatabase();
     try {
       final renewalRepository = RenewalRepository(database.renewalDao);
+      final entitlementRepository = EntitlementRepository(database.settingsDao);
       final notificationService = NotificationService();
       await notificationService.init();
       final reconciliationService = ReconciliationService(
         renewalRepository: renewalRepository,
         notificationDao: database.notificationDao,
         notificationService: notificationService,
+        entitlementRepository: entitlementRepository,
       );
       await reconciliationService.reconcile();
       return true;

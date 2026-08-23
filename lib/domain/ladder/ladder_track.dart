@@ -1,5 +1,6 @@
 import '../models/custom_tier.dart';
 import '../models/date_math.dart';
+import '../models/ladder_offset.dart';
 import '../models/renewal_type.dart';
 import 'ladder_calculator.dart';
 
@@ -18,6 +19,7 @@ class LadderTrackEntry {
     required this.date,
     required this.fired,
     this.isNext = false,
+    this.offset,
   });
 
   final LadderTrackEntryKind kind;
@@ -37,6 +39,15 @@ class LadderTrackEntry {
   /// mockup's `.t-dot.next` treatment (`primaryContainer`, not yet fired).
   /// Never true for `today`/`due`.
   final bool isNext;
+
+  /// The raw ladder offset this stage entry represents — set only for
+  /// `kind == stage`, null for `today`/`due`. Carried through deliberately
+  /// so a *caller* can decide free/paid locking (compare against
+  /// [LadderTables.freeReminderOffset]) without this class needing any
+  /// entitlement concept of its own — see this file's class doc on the
+  /// gating seam. [LadderTrack.build] itself never changes shape based on
+  /// entitlement; it always returns the full paid track, unlocked.
+  final LadderOffset? offset;
 }
 
 /// Builds the ordered entry list item detail's ladder track renders — pure
@@ -44,17 +55,18 @@ class LadderTrackEntry {
 /// a device, per the developer task brief's instruction to test "the
 /// undo-last-completion revert logic and any pure helpers" honestly.
 ///
-/// **Paywall/billing gating is explicitly out of scope for this slice**
-/// (developer task brief) — this always builds the *full paid* ladder,
-/// unlocked, for every item, exactly like [LadderTables]/[LadderCalculator]
-/// already do everywhere else in this codebase (see [LadderTables]'s own
-/// class doc). The seam for a future entitlement check is here, deliberately
-/// left clean: a paywall slice would gate *which* of these entries render
-/// as locked (the greyed-marker treatment REQ-3.2/design doc §5 describes
-/// for free-tier items), layered on as a rendering concern in the widget
-/// that consumes this list — this function stays "what stages exist and
+/// **Deliberately entitlement-unaware.** [build] always returns the *full
+/// paid* ladder, unlocked, for every item, exactly like
+/// [LadderTables]/[LadderCalculator] do everywhere else in this codebase.
+/// The billing slice gates *which* of these entries render as locked (the
+/// greyed-marker treatment REQ-3.2/design doc §5 describes for free-tier
+/// items) entirely in the widget that consumes this list —
+/// `LadderTrackView`, via its `freeOffset` parameter, compares each
+/// [LadderTrackEntry.offset] against [LadderTables.freeReminderOffset] — so
+/// this function keeps meaning exactly one thing, "what stages exist and
 /// their dates," the same separation [LadderTables] already draws between
-/// the paid ladder and the free single reminder.
+/// the paid ladder and the free single reminder. See `LadderTrackView`'s
+/// own doc comment for the gating half of this seam.
 class LadderTrack {
   const LadderTrack._();
 
@@ -100,6 +112,7 @@ class LadderTrack {
           date: stage.date,
           fired: stage.fired,
           isNext: identical(stage, nextStage),
+          offset: stage.offset,
         ),
       );
     }

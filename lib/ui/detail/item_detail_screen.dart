@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 
+import '../../data/repository/entitlement_repository.dart';
 import '../../data/repository/renewal_repository.dart';
 import '../../data/repository/settings_repository.dart';
 import '../../domain/format/relative_date.dart';
+import '../../domain/ladder/ladder_tables.dart';
 import '../../domain/ladder/ladder_track.dart';
 import '../../domain/models/renewal.dart';
 import '../../domain/models/renewal_status.dart';
 import '../../domain/models/renewal_type.dart';
 import '../../domain/status/status_calculator.dart';
+import '../../services/billing/billing_gateway.dart';
 import '../../services/notifications/notification_service.dart';
 import '../../services/notifications/reconciliation_service.dart';
 import '../../theme/app_dimens.dart';
@@ -17,21 +20,27 @@ import '../common/status_visuals.dart';
 import '../common/type_badge.dart';
 import '../common/undo_controller.dart';
 import '../common/undo_toast.dart';
+import '../paywall/paywall_screen.dart';
 import 'widgets/deferred_recurrence_banner.dart';
 import 'widgets/detail_loading_view.dart';
 import 'widgets/detail_not_found_view.dart';
 import 'widgets/ladder_track_view.dart';
 
-/// Item detail — REQ-5, plus `Undo last completion` (scope doc §3d) and the
-/// deferred recurrence banner that closes REQ-9.5's notification gap.
-/// Matches `docs/design/mockups/03-item-detail.html`. Reachable by tapping a
-/// card on the home list.
+/// Item detail — REQ-5, plus `Undo last completion` (scope doc §3d), the
+/// deferred recurrence banner that closes REQ-9.5's notification gap, and
+/// (this slice) the free/paid ladder-track gating from REQ-3.2/REQ-5.2 —
+/// "gate the rendering, not the data the helper produces," per the
+/// developer task brief; see `LadderTrackView`'s doc comment for exactly
+/// how that seam works. Matches `docs/design/mockups/03-item-detail.html`.
+/// Reachable by tapping a card on the home list.
 class ItemDetailScreen extends StatefulWidget {
   const ItemDetailScreen({
     super.key,
     required this.itemId,
     required this.repository,
     required this.settingsRepository,
+    required this.entitlementRepository,
+    required this.billingGateway,
     required this.notificationService,
     required this.reconciliationService,
   });
@@ -39,6 +48,16 @@ class ItemDetailScreen extends StatefulWidget {
   final int itemId;
   final RenewalRepository repository;
   final SettingsRepository settingsRepository;
+
+  /// Drives the free/paid ladder-track rendering (REQ-3.2/5.2) via a live
+  /// stream, the same way the item itself is driven off a live stream —
+  /// a purchase completing while this screen is open updates the track
+  /// immediately, no manual refresh.
+  final EntitlementRepository entitlementRepository;
+
+  /// Only threaded through to construct [PaywallScreen] when the unlock
+  /// banner is tapped — this screen never calls it directly.
+  final BillingGateway billingGateway;
 
   /// Only actually used if the user opens Edit — [AddEditScreen] requires
   /// it for the (edit-mode-inapplicable) first-item permission-priming
@@ -114,9 +133,25 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         builder: (context) => AddEditScreen(
           repository: widget.repository,
           settingsRepository: widget.settingsRepository,
+          entitlementRepository: widget.entitlementRepository,
           notificationService: widget.notificationService,
           reconciliationService: widget.reconciliationService,
           existingItem: item,
+        ),
+      ),
+    );
+  }
+
+  /// REQ-3.2's inline unlock banner → the actual purchase screen. Design
+  /// doc §5: the paywall's own pitch is deliberately short because the
+  /// real pitch already happened here, on the ladder track.
+  Future<void> _openPaywall() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => PaywallScreen(
+          billingGateway: widget.billingGateway,
+          entitlementRepository: widget.entitlementRepository,
+          reconciliationService: widget.reconciliationService,
         ),
       ),
     );
@@ -139,6 +174,26 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Entitlement drives only the ladder card's rendering (REQ-3.2/5.2) —
+    // deliberately a separate, independent StreamBuilder rather than
+    // merged into the item stream below, so a purchase/restore landing
+    // while this screen is open updates the track without needing the
+    // item's own row to change. Defaults to `false` (free/locked
+    // rendering) for the brief instant before the first value arrives —
+    // this is a local drift read, not a network call, so that gap is
+    // negligible, and "briefly under-render what's unlocked" is the safe
+    // direction to fail in over the reverse.
+    return StreamBuilder<bool>(
+      stream: widget.entitlementRepository.watchEntitled(),
+      initialData: false,
+      builder: (context, entitlementSnapshot) {
+        final isEntitled = entitlementSnapshot.data ?? false;
+        return _buildForEntitlement(context, isEntitled);
+      },
+    );
+  }
+
+  Widget _buildForEntitlement(BuildContext context, bool isEntitled) {
     return StreamBuilder<Renewal?>(
       stream: _itemStream,
       builder: (context, snapshot) {
@@ -189,7 +244,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                     _Hero(item: item, status: status, now: now),
                     const SizedBox(height: AppSpacing.sp4),
                     if (!isDone) ...[
-                      _LadderCard(item: item, now: now),
+                      _LadderCard(item: item, now: now, isEntitled: isEntitled, onUnlock: _openPaywall),
                       const SizedBox(height: AppSpacing.sp4),
                     ],
                     if (item.type == RenewalType.healthCheck) ...[
@@ -342,10 +397,17 @@ class _Hero extends StatelessWidget {
 }
 
 class _LadderCard extends StatelessWidget {
-  const _LadderCard({required this.item, required this.now});
+  const _LadderCard({required this.item, required this.now, required this.isEntitled, required this.onUnlock});
 
   final Renewal item;
   final DateTime now;
+
+  /// REQ-3.2/REQ-5.2 — the seam named in the developer task brief: "gate
+  /// the rendering, not the data the helper produces." [LadderTrack.build]
+  /// below is called identically regardless of tier; only this widget
+  /// decides what renders locked.
+  final bool isEntitled;
+  final VoidCallback onUnlock;
 
   @override
   Widget build(BuildContext context) {
@@ -356,6 +418,11 @@ class _LadderCard extends StatelessWidget {
       now: now,
       customTier: item.customTier,
     );
+    final freeOffset =
+        isEntitled ? null : LadderTables.freeReminderOffset(item.type, customTier: item.customTier);
+    final lockedCount = freeOffset == null
+        ? 0
+        : entries.where((e) => e.kind == LadderTrackEntryKind.stage && e.offset != freeOffset).length;
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.sp4),
@@ -367,30 +434,43 @@ class _LadderCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Your reminder ladder', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+          Text(
+            isEntitled ? 'Your reminder ladder' : 'Your reminder (free plan)',
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+          ),
           const SizedBox(height: 2),
           Text(
-            _ladderDescription(item.type),
+            isEntitled ? _ladderDescription(item.type) : _freeDescription,
             style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant, height: 1.5),
           ),
-          LadderTrackView(entries: entries),
+          LadderTrackView(entries: entries, freeOffset: freeOffset),
           const SizedBox(height: 6),
-          Row(
-            children: [
-              Icon(Icons.check_circle, size: 14, color: scheme.primary),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  _activeNote(item.type),
-                  style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: scheme.primary),
+          if (isEntitled)
+            Row(
+              children: [
+                Icon(Icons.check_circle, size: 14, color: scheme.primary),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    _activeNote(item.type),
+                    style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: scheme.primary),
+                  ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            )
+          else if (lockedCount > 0)
+            _UnlockBanner(count: lockedCount, reason: _unlockReason(item.type), onUnlock: onUnlock),
         ],
       ),
     );
   }
+
+  // REQ-3.2: "Free plan gives every item one well-timed reminder — no
+  // escalation, no overdue follow-up." matching `03-item-detail.html`
+  // panel p3's free-tier header text verbatim.
+  static const String _freeDescription =
+      "Free plan gives every item one well-timed reminder — no escalation, no overdue follow-up. Here's where "
+      'it sits against the full ladder:';
 
   // Developer-authored copy, following design doc §2's own per-type
   // reasoning column (only Passport and Health check are actually mocked
@@ -429,6 +509,86 @@ class _LadderCard extends StatelessWidget {
       default:
         return 'Full ladder active — plus overdue follow-through if this passes unmarked';
     }
+  }
+
+  /// REQ-3.2's `[BA DEFAULT]`: the unlock banner's explanatory line should
+  /// be type-specific ("explains *why* the missing stages matter for that
+  /// type"), reusing design doc §2's own per-type rationale column rather
+  /// than one generic sentence for all seven types — only Passport is
+  /// actually mocked (`03-item-detail.html` panel p3); the rest are this
+  /// developer's own drafting from that same rationale column, same
+  /// "worth a BA pass, not a silent substitute for one" flag as
+  /// [_ladderDescription]/`NotificationCopy`.
+  static String _unlockReason(RenewalType type) {
+    switch (type) {
+      case RenewalType.passport:
+        return 'The 6-month and 1-month stages are what make a passport ladder actually work — that\'s the '
+            'processing-backlog window.';
+      case RenewalType.insurance:
+        return "The 21-day stage is the one that gives you time to shop around before renewing at whatever "
+            "price you're offered.";
+      case RenewalType.licence:
+        return 'The 90- and 30-day stages cover the time renewal usually needs for accumulated hours and board '
+            'processing.';
+      case RenewalType.vehicle:
+        return "The 30- and 14-day stages are what give you time to book, not just a last-minute scramble.";
+      case RenewalType.warranty:
+        return 'The 30-day stage is the one that gives you time to actually use the warranty before it closes.';
+      case RenewalType.healthCheck:
+        return 'The 30- and 14-day stages are what give you time to actually get an appointment booked.';
+      case RenewalType.custom:
+        return "The earlier stages are what give you real lead time, not just a last-minute nudge.";
+    }
+  }
+}
+
+/// REQ-3.2's inline `.unlock-banner` — sits on the ladder track itself,
+/// not as a separate interstitial, matching `03-item-detail.html` panel
+/// p3's placement and copy pattern exactly (`"[N] more warnings live
+/// here, unclaimed"` + type-specific reason + unlock button).
+class _UnlockBanner extends StatelessWidget {
+  const _UnlockBanner({required this.count, required this.reason, required this.onUnlock});
+
+  final int count;
+  final String reason;
+  final VoidCallback onUnlock;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      margin: const EdgeInsets.only(top: AppSpacing.sp3),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sp3, vertical: 10),
+      decoration: BoxDecoration(color: scheme.primaryContainer, borderRadius: BorderRadius.circular(AppShapes.md)),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: RichText(
+              text: TextSpan(
+                style: TextStyle(fontSize: 11.5, color: scheme.onPrimaryContainer, height: 1.4),
+                children: [
+                  TextSpan(
+                    text: '$count more warning${count == 1 ? '' : 's'} live here, unclaimed\n',
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5),
+                  ),
+                  TextSpan(text: reason),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          FilledButton(
+            onPressed: onUnlock,
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              textStyle: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
+            ),
+            child: const Text('Unlock — \$3.99'),
+          ),
+        ],
+      ),
+    );
   }
 }
 
