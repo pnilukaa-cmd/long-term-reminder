@@ -1,7 +1,7 @@
 # V1 Acceptance Criteria — renewal-reminder
 
 Prepared by: business-analyst
-Date: 2026-08-21
+Date: 2026-08-21 (amended 2026-08-23 — see revision note below)
 Inputs: `CLAUDE.md`, `docs/product/01-v1-scope.md` (amended), `docs/design/02-v1-design.md` (amended), `docs/design/mockups/*.html`
 Routed to: developer (build), qa-tester (test criteria), product-manager (confirm flagged conflicts/defaults)
 
@@ -9,31 +9,37 @@ Numbering starts at REQ-1 — first requirements doc for this project. Each requ
 
 ---
 
+## Revision note (2026-08-23)
+
+Closes out the items routed to business-analyst in scope doc §8 that were still open, plus one implementation review requested directly. Five changes, all below:
+
+1. **§0.1 / REQ-11.3 (Snooze):** closed as resolved-cut, not open. REQ-11.3 is locked to a single `Mark done` notification action — the "contingent on §0.1" branch is removed, since there's only one branch now. The corresponding line in §15 and risk item 4 in §16 are updated to match (both were written when Snooze's fate was still undecided).
+2. **§0.2 / REQ-5.4 (long-press delete):** re-framed as a confirmed product decision, not a tentative BA default — ux-designer has since drawn both previously-missing states (`01-home-list.html`'s long-press-reveal panel, `03-item-detail.html`'s expanded-overflow-menu panel). Criteria substance is unchanged, per product-manager's 2026-08-21 note that this wouldn't need to change, only its framing.
+3. **REQ-4.2 (`Done` status):** the single `Done` bullet is rewritten into two, distinguishing terminal items (Warranty; "no repeat" Custom) — where `Done` is a real, persistent status — from recurring items, where `Done` is never a status the item sits in past the moment its next cycle's due date is set, per product-manager's 2026-08-21 recurrence-lifecycle decision (scope doc §3d).
+4. **New: REQ-9.7, `Undo last completion`** — acceptance criteria for the new item-detail action from scope doc §3d, including its single-level-undo boundary. Not yet mocked (flagged inline, same convention as REQ-9.2/9.4).
+5. **REQ-1.4 (Settings disclaimer):** a new paragraph naming the force-stop notification gap plainly, per the technical ADR's (`04-scheduling-and-stack.md` §2) finding that this is a real, unfixable-in-code limitation that belongs in user-facing copy, not just an engineering note.
+
+Also reviewed and resolved: developer's flagged stripped-down notification-permission implementation (§0.8, REQ-11.1) — the reduced UI shape is **accepted**, but a specific defect in the implementation is **not accepted as shipped** and must be fixed. See §0.8 and the revised REQ-11.1 for the full reasoning and the exact criteria this resolves to.
+
+---
+
 ## 0. Conflicts, gaps, and things two developers would build differently
 
 Read this section first. These are not silently resolved elsewhere in this document without a flag.
 
-### 0.1 Snooze is not in the v1 scope doc at all, but is load-bearing in the design doc and every notification mockup — **needs product-manager confirmation before build**
+### 0.1 [RESOLVED 2026-08-21 by product-manager] Snooze is cut from v1
 
-`docs/product/01-v1-scope.md`'s P0 list (§1) never mentions a snooze capability. It is not in the routed-questions list (§8), not in the notification-volume math (§6), and not one of the four features product-manager explicitly amended in this revision. Yet `docs/design/02-v1-design.md` §4 states every expanded notification carries **two** actions, "Mark done" **and** "Snooze 2 weeks," and both `docs/design/mockups/07-notifications.html` panels (single ladder-stage, single overdue nag) render a "Snooze 2 weeks" button as a first-class action alongside Mark done. This is a real feature with real technical scope (rescheduling, a "snoozed" concept in the data model, a decision about whether it changes list status) that was never routed through product-manager's scoping process the way the other three amendments were.
+Originally flagged here as an unresolved conflict: `docs/design/02-v1-design.md` §4 and both panels of `docs/design/mockups/07-notifications.html` drew a "Snooze 2 weeks" action on every notification, despite Snooze never appearing in scope doc §1's P0 list, §8's routing, or §6's notification-volume math (≈1.12/month, which never counted a Snooze re-post). product-manager resolved this in the 2026-08-21 revision of `01-v1-scope.md`: **Snooze is cut from v1 entirely**, not accounted for.
 
-It also has a direct interaction with the one number this whole revision was built to protect: §6's ≈1.12/month and the "6 in the worst week" ceiling are both computed purely from the ladder + overdue schedule. A snoozed notification that reposts 14 days later is an *extra* notification the budget math never counted. If snooze ships as designed, the volume math in both docs is understated by however many times users actually use it — self-inflicted, not degenerate-case, volume.
+Reasoning (full detail in that doc's Decision 1): the existing ladder/overdue cadence already re-touches an unactioned notification later, on schedule, without needing a second scheduling mechanism — dismissing a notification doesn't lose the item, it stays visible at its correct status and gets reminded again by the mechanism that's already budgeted. Snooze would have added real, unbudgeted state-machine complexity (interacting with grouping and cancellation bookkeeping) for a convenience feature, not a gap in the core loop. ux-designer removed the action from both mockup panels and design doc §4's text. This document's REQ-11.3 is updated accordingly (below) — only `Mark done` ships as a notification action in v1.
 
-**I'm not able to resolve this by picking a reasonable default and moving on, per the instruction to surface rather than quietly fill in ambiguity that might be wrong** — this needs an explicit call from product-manager: is Snooze in v1 or not?
+**This is closed, not deferred.** Snooze remains a real P1 candidate for a future release, contingent on actual usage evidence (not assumption) and an honest re-count of the volume math if it's ever revisited — see scope doc §7 — but there is nothing left to resolve here for v1.
 
-**If it's confirmed in scope**, my recommended default for developer to build against (stated so this doesn't block, but flagged as a default, not a locked decision):
-- Snooze reposts the *same* notification 14 days from the moment it's tapped, with the same message. It does not alter the underlying ladder schedule, does not change the item's list status (an overdue item stays "Overdue," a due-soon item stays whatever the ladder currently says), and does not count toward or reduce the remaining ladder/overdue stage count.
-- Available on both free and paid tiers (it's a per-notification action, not a ladder feature — gating it would need its own free/paid design decision that doesn't exist).
-- Repeatable — a user can snooze the same notification more than once.
-- Not undoable (same reasoning as notification-triggered mark-done in scope doc §3c — no foreground UI surface exists at the moment it fires).
+### 0.2 [CONFIRMED 2026-08-21] Delete affordance: long-press (list) / overflow menu (detail)
 
-**If it's not confirmed in scope**, the action must be removed from both notification mockup panels and design doc §4 before developer builds against them, so the shipped notification doesn't promise a capability the app doesn't have.
+Originally flagged here as a gap: scope doc §3c named "list quick-action" as a covered undo-toast trigger for delete, but no mockup showed a list-level delete affordance, and item-detail's overflow (⋮) menu was never expanded in any panel. business-analyst's default (long-press-to-reveal on the list, overflow-menu on detail) was adopted by product-manager as a confirmed decision on 2026-08-21 — see that revision note's "Decision 2" in `01-v1-scope.md` — for the standard Android reasons: avoids a permanent per-row icon, consistent with the same accidental-trigger reasoning already used to reject swipe-to-delete, and keeps delete reachable in one screen rather than forcing a detour through item detail.
 
-### 0.2 Delete has no visible list-level affordance in the mockups, despite scope doc §3c naming "list quick-action" as a covered undo-toast trigger for delete
-
-`docs/product/01-v1-scope.md` §3c: "Covered actions: delete item, and mark-done (both in-app, **from list quick-action or item detail**)." But `docs/design/mockups/01-home-list.html`'s card markup has exactly one action control — `.quick-done` (the checkmark) — no delete icon, no swipe gesture (swipe is explicitly rejected for mark-done in design doc §4 on accidental-tap grounds, but delete's list-level gesture is never addressed at all, positively or negatively). Item detail has an overflow (⋮) icon in its app bar (`03-item-detail.html`, all success-state panels) that is never expanded in any mockup panel — presumably where "Delete" lives at the detail level, but that's an inference, not something shown.
-
-**[BA DEFAULT, flagged for ux-designer, not blocking]:** write acceptance criteria in §5.4 below assuming (a) item-detail delete lives behind the existing overflow menu, and (b) list-level delete is reached via long-press on a card to reveal a delete action — long-press because it's the standard Android pattern for "reveal a destructive secondary action without a dedicated visible icon on every row," and it's consistent with the design doc's own reasoning for rejecting swipe (avoids the same accidental-trigger risk). This is the one item in this section I'd want ux-designer to actually confirm or override with a real mockup state, since "delete from the list" is explicitly named as in-scope but isn't drawn anywhere.
+**Both states are now drawn**, closing the visual gap this section originally flagged: `docs/design/mockups/01-home-list.html`'s tab labeled "Long-press — delete revealed (new)", and `docs/design/mockups/03-item-detail.html`'s tab labeled "Overflow menu — Delete (new)". REQ-5.4 below is updated to cite these directly and drop its `[BA DEFAULT]` framing — the interaction pattern and its visuals are both locked now, not a placeholder.
 
 ### 0.3 Timing of the 6-second undo window against the mark-done recurrence bottom sheet is not specified, and the naive reading breaks it
 
@@ -43,25 +49,37 @@ Scope doc §3c says the undo window is "6 seconds" and, on revert, "any recurren
 
 ### 0.4 Only the Health check variant of the mark-done recurrence bottom sheet is actually mocked
 
-Design doc §4 describes three variants in prose — the generic recurring-type sheet (insurance/vehicle/licence/passport, smart default "Same time next year" / "+10 years"), the Health check variant (shown, `03-item-detail.html` panel p6), and Custom's yes/no "does this repeat?" prompt — but only the Health check one exists as an actual mockup panel. Acceptance criteria for the other two (REQ-9.2, REQ-9.3) are written against the design doc's text description, not a drawn state. This is a lower-severity gap than 0.2 (behavior is described, just not drawn) — flagging so it isn't mistaken for a verified mockup when QA writes test cases.
+Design doc §4 describes three variants in prose — the generic recurring-type sheet (insurance/vehicle/licence/passport, smart default "Same time next year" / "+10 years"), the Health check variant (shown, `03-item-detail.html` panel p6), and Custom's yes/no "does this repeat?" prompt — but only the Health check one exists as an actual mockup panel. Acceptance criteria for the other two (REQ-9.2, REQ-9.3) are written against the design doc's text description, not a drawn state. This is a lower-severity gap than 0.2 (behavior is described, just not drawn) — flagging so it isn't mistaken for a verified mockup when QA writes test cases. The new REQ-9.7 (`Undo last completion`, added 2026-08-23) is in the same position — described in scope doc §3d, not yet drawn anywhere.
 
 ### 0.5 Recurrence smart-default is computed from the due date, not the completion date — stated once, applied everywhere for consistency
 
-The Health check bottom sheet mockup computes "Same as your setting — In 12 months" as **14 May 2028**, which is the item's due date (14 May 2027) plus 12 months — not "today plus 12 months." Nothing in either doc says this explicitly for the other recurring types, but I'm applying the same rule uniformly (REQ-9.1) rather than leaving each type to infer its own basis, since a user marking an item done early (before its due date) would otherwise get a different next-cycle date depending on which developer wrote which type's logic. **[BA DEFAULT, inferred from the one mocked example, not independently confirmed]** — flagging because it's exactly the kind of thing that's obvious once you see it and easy to get inconsistently right without a stated rule.
+The Health check bottom sheet mockup computes "Same as your setting — In 12 months" as **14 May 2028**, which is the item's due date (14 May 2027) plus 12 months — not "today plus 12 months." Nothing in either doc says this explicitly for the other recurring types, but I'm applying the same rule uniformly (REQ-9.1) rather than leaving each type to infer its own basis, since a user marking an item done early (before its due date) would otherwise get a different next-cycle date depending on which developer wrote which type's logic. **[BA DEFAULT, inferred from the one mocked example, not independently confirmed]** — flagging because it's exactly the kind of thing that's obvious once you see it and easy to get inconsistently right without a stated rule. product-manager confirmed this as an owned product decision on 2026-08-21 (see `01-v1-scope.md`'s "Five business-analyst defaults reviewed and confirmed" section).
 
 ### 0.6 Entitlement loss, timezone/clock changes, and past-dated items at creation are not addressed in either source document
 
-Covered as new rules in §7 (edge cases) — these are genuinely absent from scope and design, not contradictions between them. Resolved with stated defaults, flagged for developer/product-manager sign-off individually.
+Covered as new rules in §14 (edge cases) — these are genuinely absent from scope and design, not contradictions between them. Resolved with stated defaults; product-manager confirmed all three as owned product decisions on 2026-08-21 (see `01-v1-scope.md`'s "Five business-analyst defaults reviewed and confirmed" section).
 
-### 0.7 The exact-alarm question is still open, and most of this document assumes it resolves the way ux-designer expects
+### 0.7 The exact-alarm question is resolved — inexact scheduling is sufficient
 
-`docs/design/02-v1-design.md` recommends against needing `SCHEDULE_EXACT_ALARM` at all, since the coarsest ladder stage is 6 months and the finest is 1 day — same-day inexact delivery via `WorkManager`/inexact `AlarmManager` should be sufficient, and the exact-alarm prompt screen (`05-permissions.html`, panels p4–p6) is designed to be cut with zero rework if so. Every acceptance criterion below that references "the reminder fires on [date]" is written assuming same-day delivery is the actual contract, per the design doc's own framing — not minute- or hour-precision delivery. If developer's spike concludes exact alarms are in fact needed for some part of the cadence, the acceptance criteria in REQ-11 need a pass to add precision requirements; I haven't pre-built that contingency in because the design doc explicitly scoped its own screen to be cheaply cuttable and didn't ask me to write against the alternative. This is the single largest unresolved technical dependency underneath this whole document — see my closing note in the final message.
+Originally flagged here as the single largest unresolved technical dependency underneath this document: every acceptance criterion below that references "the reminder fires on [date]" is written assuming same-day delivery is the actual contract, not minute- or hour-precision delivery, per the design doc's own framing. developer's technical ADR (`docs/technical/04-scheduling-and-stack.md`, 2026-08-21) has since concluded — from Android's own documentation, not yet from device testing — that inexact `AlarmManager` scheduling plus a self-healing reconciliation pass is sufficient for this app's day-granularity cadence, and that the exact-alarm permission flow (`05-permissions.html` panels p4–p6) should be cut from the build. **REQ-11.2 below resolves to "cut it"** on that basis. This is still provisional until the ADR's own device-verification checklist (§6 of that document) is actually run on a real device — treat REQ-11.2 as settled for build purposes, not as empirically closed.
+
+### 0.8 [NEW 2026-08-23] Notification-permission ask shipped smaller than REQ-11.1 specifies — reviewed, partly accepted, partly a required fix
+
+developer's implementation handoff flagged that the shipped Android 13+ notification-permission flow is a stripped-down version of REQ-11.1's original three-panel priming design (`05-permissions.html` p1–p3): the real OS dialog fires directly, with no in-app rationale screen first; the ask is triggered on first item save rather than first app launch; and denial surfaces a SnackBar with an "Open settings" action rather than a dedicated recovery screen. This was flagged explicitly in the developer handoff, not silently shipped.
+
+**Reviewed and decided, not left open:**
+
+- **The reduced UI shape is accepted for v1.** The three dedicated priming/granted/denied screens do not need to be built. The app remains fully functional without the permission either way (REQ-11.1's core promise), the ask still happens at a contextual, motivated moment (right after the user's first save, when the value of a reminder is freshest in mind), and a SnackBar-with-action is an already-established pattern in this app for comparable moments (the undo toast, the save-failure message). This is a reasonable, cheap MVP substitution, not a corner cut on the app's actual function.
+- **The implementation as built has a real defect that is not accepted as-is.** The denial SnackBar is fired from the Add/Edit screen, which auto-navigates back to the list roughly 900ms after save completes. If the OS dialog's result arrives after that navigation — a real race, not a hypothetical one, since the OS dialog can easily take longer than 900ms to resolve if the user hesitates even briefly — the SnackBar has nowhere to render and the message is silently lost. In that path, a user who denies notifications gets **no explanation and no path back to settings at all**, which is worse than what REQ-11.1 promises, not merely a smaller version of it. This must be fixed before REQ-11.1 counts as met.
+- **Worth naming for product-manager's awareness, not a build blocker on its own:** losing the dedicated rationale screen is a real, if soft, cost to the notification permission grant rate — and this is the one permission the entire ladder/follow-through value proposition depends on. Not reason enough to require rebuilding three screens, but reason enough that this shouldn't be treated as a purely cosmetic simplification either.
+
+See the revised REQ-11.1 for the exact acceptance criteria this resolves to.
 
 ---
 
 ## 1. Copy — Health check field, one-time note, and the copy rule for future work
 
-Per scope doc §3, routed to business-analyst. Both mockups currently carry placeholder text explicitly marked for replacement (`02-add-edit-item.html` panel p5's `.plain-note`, `06-settings-privacy.html` panel p3's `.disclaimer`). This section is the final copy.
+Per scope doc §3, routed to business-analyst. Both mockups currently carry placeholder text explicitly marked for replacement (`02-add-edit-item.html` panel p5's `.plain-note`, `06-settings-privacy.html` panel p3's `.disclaimer`) — ux-designer still needs to paste the final copy below into those mockup files; this document is the copy's source of truth in the meantime.
 
 ### REQ-1.1 — Health check recurrence field: label and helper text
 
@@ -106,7 +124,7 @@ Per scope doc §3, this replaces the placeholder text in `06-settings-privacy.ht
 
 ### REQ-1.4 — Settings/Privacy disclaimer (full version)
 
-Placed at the bottom of the Settings/Privacy screen, below the "About" section, per the existing mockup layout. Plain paragraphs, not a single dense block — four short statements rather than one wall of legalese, per the instruction that a disclaimer nobody reads protects nobody:
+Placed at the bottom of the Settings/Privacy screen, below the "About" section, per the existing mockup layout. Plain paragraphs, not a single dense block — short statements rather than one wall of legalese, per the instruction that a disclaimer nobody reads protects nobody:
 
 > **Not legal, financial, or medical advice**
 >
@@ -116,10 +134,13 @@ Placed at the bottom of the Settings/Privacy screen, below the "About" section, 
 >
 > For Health check reminders, the interval is entirely yours (or your healthcare provider's) to set. This app just repeats whatever number you chose.
 >
-> If a reminder doesn't arrive — notifications can be delayed or blocked by your device — you're still responsible for the renewal. Treat this as a memory aid, not a compliance system.
+> If you force-stop this app — or your phone's battery manager does it for you — Android cancels every reminder that was waiting to fire, and none of them come back until you open the app again. That's Android's own design for a force-stopped app, not a bug we can fix from here. Ordinary battery-saving settings can also delay a reminder without cancelling it, even without a force-stop.
+>
+> Whether or not a reminder arrives, you're still responsible for the renewal. Treat this as a memory aid, not a compliance system.
 
 - Given the Settings/Privacy screen success state, When it renders, Then this text appears in full, replacing the placeholder currently in `06-settings-privacy.html`.
 - Given this text, When product-manager or user reviews it, Then it should read in under 20 seconds — this is the concrete bar for "plain and readable," not a subjective judgment call left to whoever ships it.
+- **[NEW 2026-08-23]** Given the force-stop paragraph specifically, When it's reviewed against `docs/technical/04-scheduling-and-stack.md` §2's finding, Then it must name the actual mechanism plainly (force-stop cancels *all* pending reminders, not just the next one; nothing brings them back except reopening the app) rather than the vaguer "notifications can be delayed or blocked" language this paragraph replaces — this is a deliberate strengthening, not a wording preference, per the instruction that an app promising you won't forget has an obligation to say so plainly.
 
 ### REQ-1.5 — Inline note (shorter version)
 
@@ -236,7 +257,9 @@ Written against `docs/design/mockups/01-home-list.html`.
 - Given an item's due date has passed and it is not marked done, its status is `Overdue`.
 - Given an item's next ladder/reminder stage has fired (i.e., it's inside its "due soon" window) but the due date has not passed, its status is `Due soon`. **[BA DEFAULT — neither doc defines the exact boundary for "due soon" vs. "upcoming" as a status category, only as a chip label tied to "next stage." Reasonable default: an item is "Due soon" once its final pre-due ladder stage has fired (i.e., it's within the last/closest stage's window), and "Upcoming" before that. Flagging since this is a threshold a developer would otherwise have to guess.]**
 - Given an item's due date is in the future and no ladder stage within its final window has fired yet, its status is `Upcoming`.
-- Given an item has been marked done for its current cycle, its status is `Done`, rendered at reduced opacity (`.card.done`, `opacity:.55`) and grouped in a collapsed section below the active ones, per design doc §6.
+- **[REWRITTEN 2026-08-23, per product-manager's 2026-08-21 recurrence-lifecycle decision, scope doc §3d]** `Done` is not one uniform rule — it depends on whether the item is terminal or recurring:
+  - **Terminal items** (Warranty always, per REQ-9.3; Custom items answered "No" to "does this repeat?", per REQ-9.4): once marked done, the item's status is `Done`, rendered at reduced opacity (`.card.done`, `opacity:.55`) and grouped in a collapsed section below the active ones, per design doc §6. This is a real, persistent, terminal status — it stays exactly as-is until the user deletes the item or uses `Undo last completion` (REQ-9.7). Nothing else changes it.
+  - **Recurring items** (any type where mark-done produces a next due date — REQ-9.1/9.2): `Done` is never a status the item sits in past the moment its next cycle's due date is set. The instant the recurrence bottom sheet resolves (or the 6-second undo window lapses, if no sheet was shown), the item's status recomputes from that new due date using the exact same Overdue/Due soon/Upcoming rule above, with no special case — no dormant "done-but-secretly-has-a-future-date" state, and no separate trigger needed to "bring it back." A freshly-cycled item due 10 years out is `Upcoming`, indistinguishable from a brand-new item entered with that due date, and renders with the item's normal (non-`.card.done`) card treatment in whichever section its new status places it — not the collapsed Done section.
 - Given a section (e.g., Overdue) has zero items, When the list renders, Then that section label and its divider do not render — sections only appear when they have at least one item, matching the fact that panel p4/p5 shows section headers only where cards exist beneath them.
 
 ### REQ-4.3 — Quick-done action
@@ -266,10 +289,11 @@ Covered under REQ-3.2. Additionally:
 
 - Given an item has no notes, When viewed, Then the Notes card shows `No notes added.` (panel p3) rather than an empty/missing card — the card itself always renders, only its content changes.
 
-### REQ-5.4 — Delete (see also §0.2's flagged gap)
+### REQ-5.4 — Delete (confirmed 2026-08-21 — see §0.2)
 
-- Given an item's detail screen, When the user opens the overflow menu (⋮) and selects Delete, Then the item is immediately removed from the list, no separate confirmation dialog appears (the undo toast is the safety net, per scope doc §3c's rationale — a confirmation dialog on top of an undo toast is redundant friction), and the undo toast renders per REQ-10.
-- **[BA DEFAULT, flagged in §0.2]** Given a card on the list, When the user long-presses it, Then a delete action is revealed (exact visual TBD by ux-designer — not mocked); tapping it triggers the same immediate-delete-plus-undo-toast flow as detail-screen delete. This criterion should be re-verified once ux-designer confirms or replaces the long-press assumption.
+- Given an item's detail screen, When the user opens the overflow menu (⋮) and selects Delete, Then the item is immediately removed from the list, no separate confirmation dialog appears (the undo toast is the safety net, per scope doc §3c's rationale — a confirmation dialog on top of an undo toast is redundant friction), and the undo toast renders per REQ-10. Matches `03-item-detail.html`'s overflow-menu-expanded panel (labeled "Overflow menu — Delete (new)").
+- Given a card on the list, When the user long-presses it, Then a delete action (`.quick-delete`) is revealed on the card, per `01-home-list.html`'s long-press panel (labeled "Long-press — delete revealed (new)"); tapping it triggers the same immediate-delete-plus-undo-toast flow as detail-screen delete. This is a confirmed interaction pattern, not a tentative default — ux-designer has drawn both states referenced above, and product-manager locked the pattern itself on 2026-08-21.
+- Given a card is in the long-press-revealed state, When the user taps elsewhere on the screen without tapping the delete action, Then the reveal state clears and no delete occurs — the standard dismiss behavior for a long-press reveal, stated explicitly since the mockup shows the revealed state as a snapshot, not its dismissal path. **[BA DEFAULT — reasonable interaction convention, not itself drawn as a distinct mockup state.]**
 
 ---
 
@@ -289,7 +313,7 @@ Per §0.5: for every recurring type, the one-tap smart default in the mark-done 
 
 ### REQ-9.3 — Warranty: no recurrence prompt
 
-- Given a Warranty item is marked done, When the action completes, Then no bottom sheet appears at all — the item simply moves to `Done` status with no next due date, per design doc §4 ("Warranty skips the recur prompt — nothing to renew"). **[BA DEFAULT — neither doc states whether a done Warranty item without a next cycle should remain permanently visible in the collapsed Done section or be eligible for deletion by the user manually; treating it as: it stays, exactly like any other Done item, until the user deletes it themselves. No automatic cleanup.]**
+- Given a Warranty item is marked done, When the action completes, Then no bottom sheet appears at all — the item simply moves to `Done` status with no next due date, per design doc §4 ("Warranty skips the recur prompt — nothing to renew"). **[BA DEFAULT — neither doc states whether a done Warranty item without a next cycle should remain permanently visible in the collapsed Done section or be eligible for deletion by the user manually; treating it as: it stays, exactly like any other Done item, until the user deletes it themselves, or uses `Undo last completion` (REQ-9.7). No automatic cleanup.]**
 
 ### REQ-9.4 — Custom: "does this repeat?" prompt (not mocked — see §0.4)
 
@@ -298,11 +322,25 @@ Per §0.5: for every recurring type, the one-tap smart default in the mark-done 
 ### REQ-9.5 — Mark-done from a notification
 
 - Given a user taps `Mark done` on an expanded notification (ladder-stage or overdue), When the action fires, Then the current cycle is cleared and all remaining scheduled stages for that item are cancelled immediately — matching the in-app behavior — but the recurrence question is **not** asked via a second notification. Per design doc §4, it is deferred to an inline banner on the item's detail screen, shown the next time the app is opened. **[Not mocked — no mockup panel shows this banner; developer/BA should treat design doc §4's text as the spec until a mockup exists. Low risk since the behavior is unambiguous even without a drawn state.]**
-- Given a notification-triggered mark-done, When it completes, Then no undo toast appears (scope doc §3c, explicit) — but the item's status can always be manually reverted from item detail regardless, since mark-done never destroys data, only changes status.
+- Given a notification-triggered mark-done, When it completes, Then no undo toast appears (scope doc §3c, explicit) — but the item's status can always be manually reverted from item detail regardless, since mark-done never destroys data, only changes status (extended by REQ-9.7's `Undo last completion` action for the post-window case).
 
 ### REQ-9.6 — Mark-done on an already-overdue item
 
 - Given an item's status is `Overdue`, When the user marks it done (from list or detail), Then the same flow applies as for a non-overdue item — no special-cased behavior. This is stated explicitly because it's a natural point of hesitation for a developer to wonder about, not because either source doc treats it differently.
+
+### REQ-9.7 — `Undo last completion` (item detail, new — scope doc §3d)
+
+**Location:** item-detail overflow (⋮) menu, alongside `Delete`. **Not on the list** — deliberately low-frequency, low-visibility, consistent with how delete itself is tucked behind long-press/overflow rather than a permanent icon. **Not yet mocked** — `03-item-detail.html`'s expanded overflow-menu panel currently shows only `Delete`; product-manager routed adding this entry to ux-designer on 2026-08-21, not yet drawn. Criteria below are written against scope doc §3d's text description, following the same precedent as REQ-9.2/9.4's unmocked variants.
+
+**What it's for:** a correction path for a mistake noticed *after* the 6-second undo toast (REQ-10.2) has already lapsed — not a step in the recurrence flow itself, and not a way to reach back further than the most recent completion.
+
+- Given an item whose most recent state-changing action was a mark-done event (triggered in-app from list or detail, or from a notification per REQ-9.5) and nothing else has touched the item since, When the user opens item detail's overflow menu, Then an `Undo last completion` entry is visible and enabled.
+- Given an item that has never been marked done, or whose most recent mark-done event has already been superseded (see the scope boundary below), When the overflow menu opens, Then `Undo last completion` does not appear (or appears visibly disabled) — it is never offered as a dead-end action a user can tap and have nothing happen.
+- Given `Undo last completion` is tapped, When the action fires, Then it performs the exact same revert operation already required for the undo toast in REQ-10.2: the item's due date reverts to its prior value (undoing any recurrence advance), the prior ladder/overdue schedule is restored and rescheduled, and the item's status recomputes from the restored due date. No confirmation dialog is required — same reasoning as Delete (REQ-5.4): this is a correction path, not a novel destructive action, and it's itself reversible by simply marking the item done again.
+- Given the action completes, When it finishes, Then no new undo toast appears for it — this action has no "undo the undo" mechanism in v1.
+- **Single-level-undo scope boundary:** Given `Undo last completion` has just been used on an item, When the user opens the overflow menu again with no other action in between, Then the entry is no longer available. It becomes unavailable the moment *anything else* changes the item's state: an edit save, another mark-done, a delete, or a prior use of this same action. This applies regardless of how long ago the original mark-done event happened — per scope doc §3d, a years-old, never-touched-since completion is still a well-defined, harmless single most-recent event to revert; no time cutoff is needed or specified.
+- Given a Warranty or "no-repeat" Custom item (terminal `Done`, no next cycle — REQ-9.3/9.4) is marked done, When the user later opens its overflow menu, Then `Undo last completion` is available on these items too, using the same rule — reverting a terminal `Done` back to its pre-done state is a well-defined use of the same action, whether or not the underlying event also advanced a due date. **[BA DEFAULT — neither source doc explicitly excludes terminal items from this action; scope doc §3d's "any subsequent action invalidates it" framing applies uniformly, so there's no reason to special-case terminal types out of an otherwise-general action.]**
+- Not in scope for v1 (stated explicitly per scope doc §3d, so it isn't silently expected): re-doing a previously-undone completion, undoing anything older than the single most recent mark-done event, or any list-level affordance for this action.
 
 ---
 
@@ -313,7 +351,7 @@ Per scope doc §3c and design doc §4a, written against `01-home-list.html` pane
 ### REQ-10.1 — Covered and not-covered actions
 
 - **Covered:** delete (list or detail), mark-done (list or detail).
-- **Not covered:** edit (reversible by editing again — no toast), mark-done triggered from a notification action (no foreground UI surface at that moment — see REQ-9.5).
+- **Not covered:** edit (reversible by editing again — no toast), mark-done triggered from a notification action (no foreground UI surface at that moment — see REQ-9.5; the post-window correction path for this case is REQ-9.7).
 - Given either covered action fires, When it completes, Then a dark snackbar-style toast renders at the bottom of the content area, with the FAB (list screen) or bottom action bar (detail screen) elevating to sit above it, never overlapped — per design doc §4a.
 - Copy is specific per action, not generic: `Deleted — [item label]` / `Marked done — [item label]`, each with a right-aligned `UNDO` action, matching `01-home-list.html` panel p5 and `03-item-detail.html` panel p7 exactly.
 
@@ -322,7 +360,7 @@ Per scope doc §3c and design doc §4a, written against `01-home-list.html` pane
 - Given a covered action with no recurrence prompt (delete; mark-done on a non-recurring type or a "No" answer to Custom's repeat prompt), When the action is triggered, Then the 6-second countdown starts immediately.
 - Given a covered action that opens the recurrence bottom sheet (mark-done on a recurring type), When the sheet is dismissed — via smart default tap or manual date-picker confirmation — Then the 6-second countdown starts at that point, not at the initial "Mark done" tap. While the sheet is open, no countdown is running and Undo is not yet available (there is nothing to undo yet — the action hasn't completed).
 - Given the countdown is running, When the user taps `UNDO`, Then the entire action reverts — for delete, the item and its exact prior ladder/history state are restored; for mark-done, the current cycle re-activates, remaining ladder stages are restored, and any recurrence choice made in the sheet is discarded.
-- Given the countdown lapses without an undo tap, When it expires, Then the action becomes final — for delete, the underlying data is actually removed at this point (not before — see developer's routed confirmation in scope doc §8 that the deferred-write approach needs no persistent trash table); for mark-done, remaining ladder stages are actually cancelled at this point.
+- Given the countdown lapses without an undo tap, When it expires, Then the action becomes final — for delete, the underlying data is actually removed at this point (not before — see developer's routed confirmation in scope doc §8 that the deferred-write approach needs no persistent trash table); for mark-done, remaining ladder stages are actually cancelled at this point. This is also the exact revert operation reused by REQ-9.7's `Undo last completion` for the post-window case.
 - **[BA DEFAULT — overlapping actions]** Given a toast is currently showing for action A, When the user triggers a second covered action B before A's window lapses, Then action A commits immediately (its window ends early, Undo for A is no longer available) and a new toast begins its own fresh 6-second window for action B. This keeps the mechanism simple for a solo developer to build and avoids stacking or merging toasts, at the cost of a user losing the ability to undo action A if they immediately follow it with action B — an acceptable tradeoff for v1, not raised in either source doc.
 
 ---
@@ -331,22 +369,27 @@ Per scope doc §3c and design doc §4a, written against `01-home-list.html` pane
 
 Written against `docs/design/mockups/05-permissions.html` and `07-notifications.html`.
 
-### REQ-11.1 — Notification permission priming and outcomes
+### REQ-11.1 — Notification permission ask [REVISED 2026-08-23 — see §0.8]
 
-- Given first launch (or first time notifications are needed and not yet granted), When the app shows its own priming screen (panel p1) before the OS dialog, Then tapping `Allow notifications` triggers the actual OS permission dialog (panel p2's `.os-dialog` mock represents this).
-- Given the OS permission is granted, When the flow completes, Then panel p2's confirmation state shows and the app proceeds normally.
-- Given the OS permission is denied (or the user taps `Not now` on the priming screen), When the flow completes, Then panel p3's recovery state shows: the app states plainly that tracking still works without notifications, offers `Open notification settings` and `Continue without reminders`. **This directly answers the "what happens if permission is denied outright" edge case: the app remains fully usable for add/edit/list/status-tracking; only notification delivery is affected.** No feature should be blocked or degraded beyond "no notifications fire" as a result of a permission denial.
-- Given permission was previously denied, When the user later grants it via system settings (outside the app's own flow), Then any items already tracked have their ladders/overdue nags scheduled from that point forward — developer should treat "permission newly granted" as a trigger to (re)schedule all currently-eligible future notifications for existing items, not just new ones created after the grant. **[BA DEFAULT — neither doc addresses this transition explicitly; without this rule, a user who initially denies and later enables notifications from system settings would get no reminders for items they already added, which defeats the point of enabling it.]**
+**This revision replaces the original REQ-11.1 in full.** developer shipped a stripped-down version of the originally-specified three-panel priming flow (`05-permissions.html` p1–p3). Per §0.8's review: the reduced UI shape is **accepted** for v1; a specific implementation defect is **not accepted as shipped** and must be fixed before this requirement counts as met.
 
-### REQ-11.2 — Exact-alarm permission (conditional — see §0.7)
+- Given a user saves their first item (not first app launch — the ask is triggered on first save, not on opening the app), When the save completes, Then the real Android notification-permission dialog fires directly — no in-app rationale screen precedes it. This is the accepted, shipped shape; `05-permissions.html` panels p1 (priming) and p2 (granted confirmation) are **not** required to be built.
+- Given the OS dialog is granted, When it resolves, Then no further UI is required for this outcome — the app proceeds normally.
+- Given the OS dialog is denied, When it resolves, Then the user reliably sees a message stating that notifications are off, that tracking still works without them, and offering an `Open settings` action that deep-links to the app's OS notification settings. **"Reliably" is the operative word and the specific fix required**: this message must render regardless of how quickly the Add/Edit screen has already auto-navigated back to the list after save. As currently built, a slow or hesitant response to the OS dialog can cause this message to never render at all — that is the defect this criterion exists to close. QA should specifically test the denial path with a deliberately delayed tap on the OS dialog to try to reproduce the race.
+- Given permission was denied and the user takes no further action, When they continue using the app, Then all tracking/list/status functionality remains fully available — only notification delivery is affected. No feature should be blocked or degraded beyond "no notifications fire" as a result of a permission denial.
+- Given permission was previously denied, When the user later grants it via system settings (outside the app's own flow), Then any items already tracked have their ladders/overdue nags scheduled from that point forward — developer should treat "permission newly granted" as a trigger to (re)schedule all currently-eligible future notifications for existing items, not just new ones created after the grant. **[BA DEFAULT — unchanged from the original REQ-11.1; neither doc addresses this transition explicitly, and without this rule a user who initially denies and later enables notifications from system settings would get no reminders for items they already added, defeating the point of enabling it.]**
 
-- Given developer's spike confirms same-day inexact delivery is sufficient (the design doc's expectation), Then panels p4–p6 of `05-permissions.html` are cut entirely with no other rework required, per the design doc's own framing, and no acceptance criteria in this document depend on exact-alarm behavior.
-- Given developer's spike concludes exact timing is required for some part of the cadence, Then this section needs a revision pass before build — flagged, not resolved here, since resolving it would mean guessing at a technical outcome that isn't mine to determine.
+**Not required for v1, and not a defect that this revision leaves open:** the dedicated `05-permissions.html` panel p1 (priming rationale) and panel p3 (dedicated denial-recovery screen, as opposed to the SnackBar). These are accepted omissions per §0.8, not gaps.
 
-### REQ-11.3 — Single notification content and actions
+### REQ-11.2 — Exact-alarm permission (resolved — see §0.7)
 
-- Given a ladder-stage notification fires, When it renders, Then it shows the item's category icon/tint, a title in the form `[Label] · due in [N] days` (or type-appropriate phrasing), body copy that is plain and matter-of-fact (not urgency-stacked), and two actions: `Mark done` and `Snooze 2 weeks` — **contingent on §0.1's resolution**. If Snooze is confirmed out of scope, only `Mark done` appears.
-- Given an overdue-nag notification fires, When it renders, Then title/body use the collaborative, non-blame tone specified in design doc §4 (e.g., `"[Label] — still open"` / `"Was due [N] days ago. Still need to sort this?"`), matching `07-notifications.html` panel p2 exactly, with the same action set as above.
+- Per developer's technical ADR (`docs/technical/04-scheduling-and-stack.md`), inexact delivery is sufficient for this app's day-granularity cadence. **Panels p4–p6 of `05-permissions.html` are cut entirely** from the build, with no other rework required, per the design doc's own "zero rework if unneeded" framing. No acceptance criterion in this document depends on exact-alarm behavior.
+- This is provisional on the ADR's own device-verification checklist actually being run before ship (ADR §6) — if that testing surfaces routine same-day-delivery slippage on stock Android (not an OEM-overlay issue), this section needs revisiting. Not expected, per the ADR's own reasoning, but named here so it isn't forgotten as a pre-ship check.
+
+### REQ-11.3 — Single notification content and actions (locked 2026-08-21 — `Mark done` only, see §0.1)
+
+- Given a ladder-stage notification fires, When it renders, Then it shows the item's category icon/tint, a title in the form `[Label] · due in [N] days` (or type-appropriate phrasing), body copy that is plain and matter-of-fact (not urgency-stacked), and a single action: `Mark done`. **No Snooze action ships in v1** — Snooze was cut from scope entirely (§0.1, resolved 2026-08-21); there is no contingent branch left to resolve.
+- Given an overdue-nag notification fires, When it renders, Then title/body use the collaborative, non-blame tone specified in design doc §4 (e.g., `"[Label] — still open"` / `"Was due [N] days ago. Still need to sort this?"`), matching `07-notifications.html` panel p2 exactly, with the same single `Mark done` action.
 
 ---
 
@@ -402,12 +445,12 @@ Written against `06-settings-privacy.html`.
 
 - **Loading (p1):** skeleton.
 - **Error (p2):** load failure — reassures the user that renewal data isn't held on this screen and isn't at risk.
-- **Success (p3):** Reminders group (notification settings deep-link, exact-alarm settings deep-link if REQ-11.2 keeps that screen), Purchase group (full-ladder status, restore purchase), a green privacy card stating local-only storage plainly, About/version, and the disclaimer from REQ-1.4.
+- **Success (p3):** Reminders group (notification settings deep-link, exact-alarm settings deep-link if REQ-11.2 keeps that screen — it doesn't, per §0.7/REQ-11.2), Purchase group (full-ladder status, restore purchase), a green privacy card stating local-only storage plainly, About/version, and the disclaimer from REQ-1.4.
 
 ### REQ-15.2 — Local-only storage guarantee
 
 - Given the app at any point, no network call is made that transmits item data, notes, or usage off-device — this is a structural/architectural requirement more than a UI one, and developer should treat it as a hard constraint verified at code-review and QA-test time, not just documented here. Play's Data Safety disclosure (per `CLAUDE.md`'s known constraints) depends on this actually being true, not just claimed.
-- Given the privacy card on Settings, its copy ("Everything stays on this device — No account, no cloud, no sync. Your renewal dates and notes never leave your phone.") must remain accurate; if any future feature introduces network calls (e.g., RevenueCat billing verification, which does call out to a service), this card's copy needs review since "never leave your phone" would no longer be literally true for billing/entitlement data even if item data itself stays local. **Flagging now since RevenueCat is the prior-research-favored billing approach (per `CLAUDE.md`) and this is exactly the kind of claim that quietly goes stale.**
+- Given the privacy card on Settings, its copy ("Everything stays on this device — No account, no cloud, no sync. Your renewal dates and notes never leave your phone.") must remain accurate; since the paywall (P0, §11 above) uses direct Play Billing (`docs/technical/04-scheduling-and-stack.md` §5, confirmed over the prior RevenueCat default), purchase/entitlement verification does call out to Google's servers. This card's copy needs a scoped exception rather than a bare "never leave your phone" claim — e.g., "...never leave your phone — the one exception is a purchase check with Google Play if you buy the unlock, which doesn't include any of your renewal data." **[BA DEFAULT — exact final wording is a small copy task for whoever ships this screen; the privacy policy (`docs/legal/privacy-policy.md`) already states this distinction in full and can be used as the source for the shorter in-app phrasing.]** This closes the flag developer raised against this requirement in the technical ADR.
 
 ---
 
@@ -430,7 +473,7 @@ Resolves the "what happens to scheduled notifications when a due date is edited 
 
 ## 14. Edge cases resolved with stated defaults
 
-Per the task brief's explicit list of examples. Each is a **[BA DEFAULT]** unless noted otherwise, since neither source doc addresses these.
+Per the task brief's explicit list of examples. Each is a **[BA DEFAULT]** unless noted otherwise, since neither source doc addresses these. All three below were confirmed by product-manager as owned product decisions on 2026-08-21 (see `01-v1-scope.md`).
 
 ### REQ-17.1 — Due date in the past at creation time
 
@@ -459,10 +502,10 @@ Named explicitly so it isn't silently built or silently skipped:
 - **The free-tier "why these stages matter" explanatory line for each type's unlock banner** (REQ-3.2) — pattern given, six of seven types' specific wording not yet drafted.
 - **Restore-purchase failure copy** (REQ-14.3) — not mocked, default drafting deferred to implementation.
 - **Colorblind/accessibility verification of the Health check category tint** against the error-container red — design doc §2a/§6 flags this as its own open question for a "second look," explicitly not something resolved by acceptance criteria; recommend qa-tester include a colorblind-simulation pass on this one tint specifically before ship.
-- **Any acceptance criteria contingent on the exact-alarm decision** (§0.7) — deferred until developer's spike resolves whether inexact delivery is actually sufficient.
-- **Snooze behavior in full** (§0.1) — deferred until product-manager confirms whether it's in scope at all; only a default interpretation is offered here, not locked criteria.
+- **Any acceptance criteria contingent on the exact-alarm decision** — resolved, not open; see §0.7/REQ-11.2 (inexact scheduling confirmed sufficient, exact-alarm screens cut).
+- ~~**Snooze behavior in full**~~ — **Resolved, not deferred.** Snooze was cut from v1 entirely on 2026-08-21 (§0.1); there is no snooze behavior to specify. No notification action other than `Mark done` ships in v1 (REQ-11.3).
 - **Widgets, dark theme, search/filter/sort, OCR, live vehicle data, calendar import, multi-profile, attachments, localization** — all explicitly out of v1 per scope doc §1's table; not addressed here at all, consistent with that table, not by omission.
-- **Play Store listing content, closed-testing tester communications, Data Safety form answers** — outside this document's scope; noted because REQ-15.2's local-only guarantee is the thing that Data Safety form will need to reflect accurately, and that's a growth/product-manager-owned artifact, not a BA one.
+- **Play Store listing content, closed-testing tester communications, Data Safety form answers** — outside this document's scope; noted because REQ-15.2's local-only guarantee is the thing that Data Safety form will need to reflect accurately, and that's a growth/product-manager-owned artifact, not a BA one. The privacy policy itself (`docs/legal/privacy-policy.md` / `.html`) has been drafted and is a BA deliverable, per direct task routing — see that document.
 
 ---
 
@@ -470,7 +513,7 @@ Named explicitly so it isn't silently built or silently skipped:
 
 For product-manager and developer to weigh in on before treating as settled, per this role's standing instruction not to make technical feasibility calls unilaterally:
 
-1. **REQ-11.2 / §0.7 — the exact-alarm/Doze question.** Nearly every scheduling-related requirement in this document assumes same-day inexact delivery survives Doze reliably over horizons as long as 6 months (Passport's first stage). If that assumption is wrong, it's not a small fix — it changes the technical foundation the entire cadence design sits on. This is the single biggest risk in this document, and it's already correctly flagged as a pre-build spike in scope doc §8; I'm reinforcing it here because so much else depends on its answer.
-2. **REQ-12.1/12.2 — notification grouping via `NotificationCompat` group summaries**, combined with per-item cancel/reschedule logic (REQ-16.1) and the deferred-write undo mechanism (REQ-10.2) all touching the same underlying notification IDs. Getting the bookkeeping right (which notification IDs belong to which item, which are pending vs. fired vs. cancelled-during-undo-window) is more state-machine complexity than its individual pieces look like in isolation. Worth a design review with developer before implementation, not just a read-through of these criteria.
+1. **REQ-11.2 / §0.7 — the exact-alarm/Doze question.** Nearly every scheduling-related requirement in this document assumes same-day inexact delivery survives Doze reliably over horizons as long as 6 months (Passport's first stage). developer's technical ADR concludes this should hold, from documentation alone — the device-verification checklist in that ADR (§6) is what actually closes this out, and hasn't been run yet as far as this document knows. Still the single biggest residual risk here.
+2. **REQ-12.1/12.2 — notification grouping via `NotificationCompat` group summaries**, combined with per-item cancel/reschedule logic (REQ-16.1) and the deferred-write undo mechanism (REQ-10.2) all touching the same underlying notification IDs. Getting the bookkeeping right (which notification IDs belong to which item, which are pending vs. fired vs. cancelled-during-undo-window) is more state-machine complexity than its individual pieces look like in isolation. developer's ADR (`04-scheduling-and-stack.md` §2) addresses this with a single `scheduled_notifications` source-of-truth table, which directly de-risks this item — still worth a design review before/alongside implementation, not just a read-through of these criteria.
 3. **REQ-17.2 — timezone/clock-change handling.** Correctly implementing "reminders still land on the right calendar day after a timezone change" without either double-firing or silently dropping notifications is a known-hard class of bug on Android. Flagging as higher-risk than its one paragraph here suggests.
-4. **§0.1 — Snooze**, if confirmed in scope, adds a second independent scheduling mechanism (per-notification re-post) alongside the ladder/overdue system, which compounds the state-machine complexity in point 2 above. If product-manager confirms it's in scope, recommend treating its interaction with grouping and cancellation explicitly, not as an afterthought bolted onto the existing notification code.
+4. ~~**§0.1 — Snooze**, if confirmed in scope, adds a second independent scheduling mechanism...~~ — **No longer applicable.** Snooze was cut from v1 on 2026-08-21 (§0.1); the state-machine complexity this item warned about doesn't arise, because there is no second scheduling mechanism being built. Left here, struck through, only so the numbering and history stay traceable — not an open risk.
