@@ -163,8 +163,26 @@ class NotificationDiffEngine {
       // A 2-day buffer absorbs ordinary inexact-delivery slippage
       // ("hours, not days" per the scheduling ADR §1) without
       // misclassifying a real clock jump as a normal firing.
+      //
+      // A strictly-future `fireOn` is NOT that case: the stage dropped out of
+      // the desired set while its alarm was still pending, so it never fired.
+      // That happens on a due-date edit, a type change, a Custom-tier change
+      // (REQ-16.1), and on an entitlement transition. It must be recorded as a
+      // cancel — `markFired` would leave `scheduled_notifications.status`
+      // claiming a notification was delivered that the user never saw, which
+      // is precisely the distinction ScheduledStateDebugScreen exists to make.
+      //
+      // `Duration.inDays` truncates toward zero, so a same-calendar-day
+      // `fireOn` yields 0 and stays in the fired/skipped branch: it may
+      // genuinely have fired earlier today, and that ambiguity is not
+      // resolvable from a date alone.
       final gapDays = today.difference(row.fireOn).inDays;
-      final kind = gapDays <= 2 ? DiffActionKind.markFired : DiffActionKind.markSkipped;
+      final DiffActionKind kind;
+      if (gapDays < 0) {
+        kind = DiffActionKind.cancel;
+      } else {
+        kind = gapDays <= 2 ? DiffActionKind.markFired : DiffActionKind.markSkipped;
+      }
       actions.add(NotificationDiffAction(kind: kind, existingRowId: row.id, existingFireOn: row.fireOn));
     }
 

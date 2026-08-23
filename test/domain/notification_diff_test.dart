@@ -122,6 +122,44 @@ void main() {
       expect(actions.single.kind, DiffActionKind.cancel);
     });
 
+    test('a still-future row that drops out of the desired set is cancelled, not marked fired', () {
+      // Regression: `today.difference(fireOn).inDays` is negative for a future
+      // fireOn, and negative is always <= 2, so this used to fall into the
+      // markFired branch. The stage never fired -- it dropped out because the
+      // desired set changed (due-date edit, type change, Custom-tier change,
+      // or an entitlement transition).
+      final actions = NotificationDiffEngine.diff(
+        desired: const [],
+        existingRows: [_row(fireOn: DateTime(2027, 9, 1))],
+        activeRenewalIds: {1}, // item still active
+        today: DateTime(2027, 6, 1),
+      );
+      expect(actions, hasLength(1));
+      expect(actions.single.kind, DiffActionKind.cancel);
+    });
+
+    test('a row whose fireOn already passed is still marked fired, not cancelled', () {
+      final actions = NotificationDiffEngine.diff(
+        desired: const [],
+        existingRows: [_row(fireOn: DateTime(2027, 5, 31))],
+        activeRenewalIds: {1},
+        today: DateTime(2027, 6, 1),
+      );
+      expect(actions, hasLength(1));
+      expect(actions.single.kind, DiffActionKind.markFired);
+    });
+
+    test('a same-calendar-day fireOn stays in the fired branch -- it may genuinely have fired earlier today', () {
+      final actions = NotificationDiffEngine.diff(
+        desired: const [],
+        existingRows: [_row(fireOn: DateTime(2027, 6, 1, 9))],
+        activeRenewalIds: {1},
+        today: DateTime(2027, 6, 1),
+      );
+      expect(actions, hasLength(1));
+      expect(actions.single.kind, DiffActionKind.markFired);
+    });
+
     test('a non-pending row that drops out of the desired set produces no action (already terminal)', () {
       final actions = NotificationDiffEngine.diff(
         desired: const [],
