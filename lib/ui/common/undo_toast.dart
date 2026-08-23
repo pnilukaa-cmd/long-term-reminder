@@ -23,10 +23,19 @@ class UndoToast extends StatelessWidget {
       builder: (context, _) {
         final pending = controller.pending;
         if (pending == null) return const SizedBox.shrink();
+        final scheme = Theme.of(context).colorScheme;
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sp4),
           child: Material(
-            color: const Color(0xFF2B2B33),
+            // Design doc §7a, bug #2: this used to hardcode the literal
+            // `#2B2B33`, which is correct only in light (a fixed dark
+            // neutral popping against a light page) and nearly disappears
+            // into dark's own surface tones — exactly the bug named in
+            // the developer task brief, and exactly this widget, since
+            // `SnackBarThemeData` (fixed separately in app_theme.dart)
+            // isn't consulted by this bespoke widget at all. Use the M3
+            // role built for "always the opposite scheme's surface."
+            color: scheme.inverseSurface,
             borderRadius: BorderRadius.circular(AppShapes.md),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 13, 8, 13),
@@ -35,13 +44,13 @@ class UndoToast extends StatelessWidget {
                   Expanded(
                     child: Text(
                       pending.toastMessage,
-                      style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.35),
+                      style: TextStyle(color: scheme.onInverseSurface, fontSize: 13, height: 1.35),
                     ),
                   ),
                   TextButton(
                     onPressed: controller.undo,
                     style: TextButton.styleFrom(
-                      foregroundColor: Theme.of(context).colorScheme.primaryContainer,
+                      foregroundColor: scheme.inversePrimary,
                     ),
                     child: const Text(
                       'UNDO',

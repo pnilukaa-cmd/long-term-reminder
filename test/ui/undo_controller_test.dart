@@ -87,6 +87,28 @@ void main() {
     expect(overlaid.single.isDone, isTrue);
   });
 
+  test(
+    'scheduleMarkDone overlay does NOT flag a RECURRING item as Done (§3d bug fix) — '
+    'it shows the new due date immediately instead',
+    () async {
+      final id = await repository.createItem(
+        type: RenewalType.insurance,
+        label: 'Car insurance',
+        dueDate: DateTime(2027, 3, 21),
+      );
+      final controller = UndoController(repository);
+      addTearDown(controller.dispose);
+
+      final item = (await repository.getById(id))!;
+      final nextDueDate = DateTime(2028, 3, 21);
+      await controller.scheduleMarkDone(item, nextDueDate: nextDueDate);
+
+      final overlaid = controller.applyOverlay([item]);
+      expect(overlaid.single.isDone, isFalse, reason: 'a recurring item mid-cycle is never Done, per scope doc §3d');
+      expect(overlaid.single.dueDate, nextDueDate);
+    },
+  );
+
   test('REQ-10.2 overlap rule: scheduling a second action commits the first immediately', () async {
     final firstId = await repository.createItem(
       type: RenewalType.warranty,

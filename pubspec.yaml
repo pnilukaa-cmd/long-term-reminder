@@ -46,6 +46,42 @@ dependencies:
   path_provider: ^2.1.4
   path: ^1.9.0
 
+  # --- This slice's additions (notification scheduling) ---
+  # Same caveat as the block above, stated again because it matters more
+  # here: I have no network access to pub.dev and no Flutter SDK in this
+  # environment, so nothing below has been resolved, fetched, or built
+  # against. Treat every version as a starting guess, not a verified pin —
+  # run `flutter pub outdated` immediately after `flutter pub get` and
+  # check each package's current changelog for Android 14/15 (API 34/35)
+  # compatibility before trusting it, per
+  # docs/technical/04-scheduling-and-stack.md §3's own named risk
+  # ("flutter_local_notifications has, historically, had real
+  # compatibility bumps around major Android permission-model changes").
+  #
+  # flutter_local_notifications: the `zonedSchedule` API + `AndroidScheduleMode`
+  # enum this slice depends on (inexactAllowWhileIdle specifically) has
+  # existed since roughly v9; pinning to a recent major as a starting
+  # point.
+  flutter_local_notifications: ^18.0.1
+  # workmanager: the periodic-reconciliation background task (§2 of the
+  # scheduling ADR). Its Dart API (`Workmanager().initialize` /
+  # `registerPeriodicTask`, and the top-level `callbackDispatcher`
+  # contract) has been stable across recent majors, but this plugin in
+  # particular has had real gaps trailing new Android versions historically
+  # — verify current maintenance status before relying on it for a ship
+  # date.
+  workmanager: ^0.6.0
+  # timezone: required by flutter_local_notifications' zonedSchedule (it
+  # takes a `TZDateTime`, not a plain `DateTime`) — this is the documented
+  # mechanism for REQ-17.2's "reminder fires on the correct calendar day
+  # relative to the device's *current* timezone," not a separate choice.
+  timezone: ^0.9.4
+  # flutter_timezone: reads the device's current IANA timezone name so
+  # `tz.setLocalLocation` can be re-set on every reconciliation pass —
+  # this is what lets a timezone change actually take effect rather than
+  # freezing to whatever zone was active at first launch.
+  flutter_timezone: ^1.0.8
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

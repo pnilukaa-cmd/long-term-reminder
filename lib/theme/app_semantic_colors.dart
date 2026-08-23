@@ -53,18 +53,22 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     categoryTints: kCategoryTintsLight,
   );
 
-  /// No dark mockup exists — these values are my own M3-style dark-tonal
-  /// derivation from the light role's hue, not a designer-specified
-  /// palette. Flagged explicitly in the developer handoff.
+  /// Design doc §7a's resolved dark values (`08-dark-theme.html` §5),
+  /// replacing the developer's earlier rough same-hue derivation. Two real
+  /// corrections worth calling out: `warning`'s hue was swept from 41° to
+  /// 83° because a literal same-hue retone at dark-appropriate lightness
+  /// reads as salmon-pink, not amber, and sat only ~14° from dark error's
+  /// hue; `success`/`successContainer` are retoned to M3's standard dark
+  /// tonal targets rather than a naive lightness inversion.
   static const dark = AppSemanticColors(
-    warning: Color(0xFFFFB951),
-    onWarning: Color(0xFF452B00),
-    warningContainer: Color(0xFF633F00),
-    onWarningContainer: Color(0xFFFFDEA6),
-    success: Color(0xFF7DDB92),
-    onSuccess: Color(0xFF00390F),
-    successContainer: Color(0xFF00531B),
-    onSuccessContainer: Color(0xFFB6F2C4),
+    warning: Color(0xFFEBC070),
+    onWarning: Color(0xFF4D3500),
+    warningContainer: Color(0xFF634700),
+    onWarningContainer: Color(0xFFFFE4AF),
+    success: Color(0xFF94D69F),
+    onSuccess: Color(0xFF003E17),
+    successContainer: Color(0xFF0D5225),
+    onSuccessContainer: Color(0xFFBBEFC2),
     categoryTints: kCategoryTintsDark,
   );
 

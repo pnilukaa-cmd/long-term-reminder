@@ -48,6 +48,22 @@ class RenewalCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final isDone = status == RenewalStatus.done;
 
+    // Design doc §7a's dark-theme elevation fix, applied where the card
+    // color is actually consumed (this widget builds its own Container
+    // rather than a Card, so `ThemeData.cardTheme` alone has no effect
+    // here — see app_theme.dart's cardTheme doc comment for the same fix
+    // at the theme level, kept for consistency/future Card() usage).
+    // Light: unchanged (white resting, white-with-border-and-shadow
+    // held). Dark: `surfaceContainerLowest` (tone 4) sits *below* the
+    // tone-6 scaffold, so resting there renders as a recessed hole; rest
+    // on `surfaceContainer` (tone 12) instead, and held/long-pressed on
+    // `surfaceContainerHigh` (tone 17) — shadow alone doesn't read on
+    // near-black, the tone step has to carry it.
+    final isDark = scheme.brightness == Brightness.dark;
+    final cardColor = isDark
+        ? (isRevealed ? scheme.surfaceContainerHigh : scheme.surfaceContainer)
+        : scheme.surfaceContainerLowest;
+
     final card = AnimatedOpacity(
       opacity: isDone ? .55 : (isDimmed ? .4 : 1),
       duration: const Duration(milliseconds: 150),
@@ -56,7 +72,7 @@ class RenewalCard extends StatelessWidget {
         padding: const EdgeInsets.all(AppSpacing.sp4),
         margin: const EdgeInsets.only(bottom: AppSpacing.sp3),
         decoration: BoxDecoration(
-          color: scheme.surfaceContainerLowest,
+          color: cardColor,
           borderRadius: BorderRadius.circular(AppShapes.lg),
           border: isRevealed ? Border.all(color: scheme.primary, width: 2) : null,
           boxShadow: isRevealed

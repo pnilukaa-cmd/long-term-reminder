@@ -42,7 +42,8 @@ class RenewalItems extends Table {
 }
 
 /// A small generic key/value table for one-time, per-install flags — e.g.
-/// the Health check "Got it" note dismissal (REQ-1.2). Kept in the same
+/// the Health check "Got it" note dismissal (REQ-1.2), and (this slice)
+/// the "notification permission already primed" flag. Kept in the same
 /// drift database rather than introducing `shared_preferences` as a second
 /// storage mechanism, per docs/technical/04-scheduling-and-stack.md §4.
 @DataClassName('AppSetting')
@@ -52,4 +53,56 @@ class AppSettings extends Table {
 
   @override
   Set<Column> get primaryKey => {key};
+}
+
+/// The reliability model's actual source of truth, per
+/// docs/technical/04-scheduling-and-stack.md §2: "Source of truth lives in
+/// the local database, not in the OS alarm table." One row per notification
+/// occurrence this app has ever decided *should* exist for an item — the
+/// reconciliation pass (`lib/services/notifications/reconciliation_service.dart`)
+/// diffs [ReconciliationPlanner]'s freshly-computed desired set against
+/// these rows on every app launch/foreground and via a periodic
+/// `workmanager` task, and re-arms or cancels to match. A previously-made
+/// scheduling call is never trusted to have survived on its own — this
+/// table, not the OS alarm table, is what's asked "what should be
+/// scheduled right now."
+///
+/// This row's own autoincrement `id` **is** the Android notification ID
+/// passed to `flutter_local_notifications` — there's no separate
+/// `androidNotificationId` column, since the row id already is a stable,
+/// unique, small integer the moment it's inserted; introducing a second
+/// column for the same value would just be a second source of truth for
+/// no benefit.
+@DataClassName('ScheduledNotification')
+class ScheduledNotifications extends Table {
+  IntColumn get id => integer().autoIncrement()();
+
+  /// FK-by-convention to `RenewalItems.id` (drift's `references()` isn't
+  /// used here so a deleted item's rows can be cleaned up explicitly by
+  /// the reconciliation pass rather than relying on cascade behaviour —
+  /// see [NotificationDao.deleteForRenewal]).
+  IntColumn get renewalId => integer()();
+
+  /// `NotificationKind.name` — "ladderStage" or "overdueNag".
+  TextColumn get kind => text()();
+
+  /// [DesiredNotification.stageKey] — this row's stable identity across
+  /// reconciliation runs, independent of its date (e.g. "ladder:2",
+  /// "overdue:0"). See that class's doc comment for the full diffing
+  /// contract this enables.
+  TextColumn get stageKey => text()();
+
+  /// The calendar day (local midnight) this is scheduled to fire on.
+  DateTimeColumn get fireOn => dateTime()();
+
+  /// REQ-12.1's grouping key — the ISO date string notifications sharing
+  /// a calendar day group under.
+  TextColumn get groupDateKey => text()();
+
+  /// [ScheduledNotificationStatus.name] — pending / fired / cancelled /
+  /// skipped. See that enum's doc comment for the state machine.
+  TextColumn get status => text().withDefault(const Constant('pending'))();
+
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
 }

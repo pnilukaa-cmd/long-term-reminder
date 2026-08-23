@@ -71,13 +71,17 @@ class _TypeTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    // Same dark-elevation fix as RenewalCard (design doc §7a) — a resting
+    // tile needs `surfaceContainer` in dark, not `surfaceContainerLowest`
+    // (which sits below the scaffold and reads as a recessed hole).
+    final tileColor = scheme.brightness == Brightness.dark ? scheme.surfaceContainer : scheme.surfaceContainerLowest;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(AppShapes.lg),
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.sp4),
         decoration: BoxDecoration(
-          color: scheme.surfaceContainerLowest,
+          color: tileColor,
           border: Border.all(color: scheme.outlineVariant),
           borderRadius: BorderRadius.circular(AppShapes.lg),
         ),

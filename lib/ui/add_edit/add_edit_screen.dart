@@ -267,15 +267,21 @@ class _AddEditScreenState extends State<AddEditScreen> {
                 right: AppSpacing.sp4,
                 bottom: AppSpacing.sp4,
                 child: Material(
-                  color: const Color(0xFF2B2B33),
+                  // Same toast-visibility fix as undo_toast.dart (design
+                  // doc §7a, bug #2) — inverseSurface/onInverseSurface
+                  // instead of a literal that vanishes in dark.
+                  color: scheme.inverseSurface,
                   borderRadius: BorderRadius.circular(AppShapes.md),
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     child: Row(
                       children: [
-                        Icon(Icons.check_circle_outline, color: Colors.white, size: 18),
-                        SizedBox(width: 10),
-                        Text('Saved — reminders scheduled', style: TextStyle(color: Colors.white, fontSize: 13)),
+                        Icon(Icons.check_circle_outline, color: scheme.onInverseSurface, size: 18),
+                        const SizedBox(width: 10),
+                        Text(
+                          'Saved — reminders scheduled',
+                          style: TextStyle(color: scheme.onInverseSurface, fontSize: 13),
+                        ),
                       ],
                     ),
                   ),

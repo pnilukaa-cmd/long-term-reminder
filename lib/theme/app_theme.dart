@@ -6,17 +6,14 @@ import 'app_semantic_colors.dart';
 /// M3 Expressive theme built from docs/design/02-v1-design.md §7's token
 /// block. The light scheme's role values are taken verbatim from the
 /// mockups' `:root` CSS custom properties (identical across every mockup
-/// file). The dark scheme has no designer-specified source — no dark
-/// mockup exists anywhere in docs/design/mockups/ — so it's generated
-/// algorithmically from the same seed hue via [ColorScheme.fromSeed] for
-/// the stock M3 roles, with [AppSemanticColors.dark] supplying the two
-/// extra roles + category tints by hand (see that file's doc comment).
-/// This is stated plainly rather than implied as verified: dark mode
-/// should get a design pass before it's treated as shippable.
+/// file). The dark scheme is design doc §7a's full, resolved token table
+/// (`docs/design/mockups/08-dark-theme.html` §5) — every role hand-retoned
+/// against this app's actual seed (not `ColorScheme.fromSeed`'s generic
+/// derivation), with the two extra semantic roles + category tints
+/// supplied by [AppSemanticColors.dark]/`kCategoryTintsDark` (see those
+/// files' doc comments for what changed from the earlier rough guess).
 class AppTheme {
   const AppTheme._();
-
-  static const _seedColor = Color(0xFF4256E5);
 
   static const _fontFamilyFallback = [
     'Google Sans',
@@ -65,12 +62,63 @@ class AppTheme {
     return _themeFrom(colorScheme, AppSemanticColors.light);
   }
 
+  /// Design doc §7a's full, resolved dark `ColorScheme` — every role
+  /// hand-retoned in CIELAB against this app's actual light-mode seed and
+  /// M3's standard dark tonal targets, per `08-dark-theme.html` §5's
+  /// token table. Values are a direct transcription, not a re-derivation.
   static ThemeData dark() {
-    final generated = ColorScheme.fromSeed(seedColor: _seedColor, brightness: Brightness.dark);
-    return _themeFrom(generated, AppSemanticColors.dark);
+    const colorScheme = ColorScheme(
+      brightness: Brightness.dark,
+      primary: Color(0xFFBAC3FF),
+      onPrimary: Color(0xFF002E6F),
+      primaryContainer: Color(0xFF00439E),
+      onPrimaryContainer: Color(0xFFDEE1FF),
+      secondary: Color(0xFFC5C4DD),
+      onSecondary: Color(0xFF2D2F45),
+      secondaryContainer: Color(0xFF44455C),
+      onSecondaryContainer: Color(0xFFE1E0F9),
+      tertiary: Color(0xFFC5C4DD),
+      onTertiary: Color(0xFF2D2F45),
+      tertiaryContainer: Color(0xFF44455C),
+      onTertiaryContainer: Color(0xFFE1E0F9),
+      error: Color(0xFFFFB4AB),
+      onError: Color(0xFF690005),
+      errorContainer: Color(0xFF93000A),
+      onErrorContainer: Color(0xFFFFDAD6),
+      surface: Color(0xFF141318),
+      onSurface: Color(0xFFE3E1EA),
+      onSurfaceVariant: Color(0xFFC7C5D0),
+      outline: Color(0xFF919099),
+      outlineVariant: Color(0xFF47464E),
+      surfaceContainerLowest: Color(0xFF0E0D14),
+      surfaceContainerLow: Color(0xFF1C1B21),
+      surfaceContainer: Color(0xFF201F26),
+      surfaceContainerHigh: Color(0xFF2A2932),
+      surfaceContainerHighest: Color(0xFF35343D),
+      surfaceDim: Color(0xFF141318),
+      surfaceTint: Color(0xFFBAC3FF),
+      inverseSurface: Color(0xFFE3E2E9),
+      onInverseSurface: Color(0xFF303036),
+      inversePrimary: Color(0xFF4256E5),
+      scrim: Color(0xFF000000),
+      shadow: Color(0xFF000000),
+    );
+
+    return _themeFrom(colorScheme, AppSemanticColors.dark);
   }
 
   static ThemeData _themeFrom(ColorScheme colorScheme, AppSemanticColors semantic) {
+    final isDark = colorScheme.brightness == Brightness.dark;
+    // Design doc §7a "Elevation and shadow" — dark mode conveys elevation
+    // with the tonal surface ladder, not shadow (a shadow is always
+    // literally black, which is nearly invisible on a near-black
+    // scaffold). `surfaceContainerLowest` (tone 4 in dark) sits *below*
+    // the tone-6 scaffold, so a card resting there would render as a
+    // recessed hole instead of an elevated surface — bug #1 named in the
+    // design doc's dark-theme pass. Fix: cards rest on `surfaceContainer`
+    // (tone 12, lighter than the scaffold) in dark; light is unchanged.
+    final cardRestColor = isDark ? colorScheme.surfaceContainer : colorScheme.surfaceContainerLowest;
+
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
@@ -85,7 +133,7 @@ class AppTheme {
         centerTitle: false,
       ),
       cardTheme: CardThemeData(
-        color: colorScheme.surfaceContainerLowest,
+        color: cardRestColor,
         elevation: 1,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppShapes.lg)),
@@ -140,11 +188,22 @@ class AppTheme {
         ),
         contentPadding: const EdgeInsets.all(14),
       ),
-      snackBarTheme: const SnackBarThemeData(
-        backgroundColor: Color(0xFF2B2B33),
-        contentTextStyle: TextStyle(color: Colors.white, fontSize: 13),
+      // Bug #2 named in design doc §7a: this used to hardcode the literal
+      // `#2B2B33` in both schemes. In light that's a deliberate fixed dark
+      // neutral that pops against a light page — it works *because* it's
+      // the opposite brightness of the scaffold. In dark, that same hex
+      // sits almost exactly inside the surfaceContainerHigh/Highest tone
+      // range, so the toast nearly vanishes into the page it's supposed
+      // to float above — and this is the undo toast (REQ-10), so it
+      // disappears exactly when it's needed. Fix: use the M3 role built
+      // for exactly this ("the opposite scheme's surface," by
+      // construction) — `inverseSurface`/`onInverseSurface` — instead of
+      // a fixed literal.
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: colorScheme.inverseSurface,
+        contentTextStyle: TextStyle(color: colorScheme.onInverseSurface, fontSize: 13),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(AppShapes.md))),
+        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(AppShapes.md))),
       ),
     );
   }

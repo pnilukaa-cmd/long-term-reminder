@@ -35,18 +35,28 @@ const Map<RenewalType, CategoryTint> kCategoryTintsLight = {
   RenewalType.custom: CategoryTint(container: Color(0xFFE5E1EC), onContainer: Color(0xFF201B29)),
 };
 
-/// Dark-mode category tints. No dark mockup exists (the design doc's own
-/// mockups are light-only) — these are my own derivation, roughly
-/// inverting each pair's tonal relationship (a darker, more saturated
-/// container; a light on-container) while preserving hue, following
-/// standard M3 dark-scheme tonal conventions. Flagged in the developer
-/// handoff as unverified against any drawn dark design.
+/// Dark-mode category tints, per design doc §7a (`08-dark-theme.html` §5),
+/// replacing the developer's earlier rough tonal-inversion guess. Every
+/// value below was hue/chroma-anchored to the light role in CIELAB, then
+/// retoned to M3's standard dark container/on-container tonal targets —
+/// not a naive lightness inversion. Two deliberate deviations worth
+/// knowing about if this table is ever touched again:
+/// - **Vehicle**'s chroma is intentionally reined in (1.6× rather than the
+///   ~3.1× the other six categories got, with hue nudged 65°→59°) to keep
+///   it clay/brown rather than drifting into the corrected dark `warning`
+///   role's amber territory — the same "not amber" constraint that chose
+///   terracotta for it in light in the first place.
+/// - **Health check**'s hue is rotated to 335° in dark (not a literal
+///   retone of light's 348°) specifically to keep separation from dark
+///   `errorContainer` — verified via Machado et al. protanopia/deuteranopia
+///   simulation, not just hue-angle math. See design doc §7a for the full
+///   colorblind-verification writeup.
 const Map<RenewalType, CategoryTint> kCategoryTintsDark = {
-  RenewalType.passport: CategoryTint(container: Color(0xFF223A5E), onContainer: Color(0xFFD3E4FF)),
-  RenewalType.insurance: CategoryTint(container: Color(0xFF1D3B36), onContainer: Color(0xFFB8EAE3)),
-  RenewalType.licence: CategoryTint(container: Color(0xFF3C2E57), onContainer: Color(0xFFEDDCFF)),
-  RenewalType.vehicle: CategoryTint(container: Color(0xFF463526), onContainer: Color(0xFFF0D9C8)),
-  RenewalType.warranty: CategoryTint(container: Color(0xFF2C3348), onContainer: Color(0xFFDDE3F5)),
-  RenewalType.healthCheck: CategoryTint(container: Color(0xFF4A2A38), onContainer: Color(0xFFF6D9E6)),
-  RenewalType.custom: CategoryTint(container: Color(0xFF39353F), onContainer: Color(0xFFE5E1EC)),
+  RenewalType.passport: CategoryTint(container: Color(0xFF004C90), onContainer: Color(0xFFD2E4FF)),
+  RenewalType.insurance: CategoryTint(container: Color(0xFF00584E), onContainer: Color(0xFFB8EDE5)),
+  RenewalType.licence: CategoryTint(container: Color(0xFF563290), onContainer: Color(0xFFEDDCFF)),
+  RenewalType.vehicle: CategoryTint(container: Color(0xFF5E402D), onContainer: Color(0xFFF8DDCD)),
+  RenewalType.warranty: CategoryTint(container: Color(0xFF294774), onContainer: Color(0xFFDCE2F5)),
+  RenewalType.healthCheck: CategoryTint(container: Color(0xFF6F2F61), onContainer: Color(0xFFFAD9F0)),
+  RenewalType.custom: CategoryTint(container: Color(0xFF4B425E), onContainer: Color(0xFFE5E1EC)),
 };

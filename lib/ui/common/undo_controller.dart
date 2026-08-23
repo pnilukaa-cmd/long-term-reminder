@@ -104,7 +104,17 @@ class UndoController extends ChangeNotifier {
       case PendingActionType.markDone:
         return items.map((item) {
           if (item.id != action.item.id) return item;
-          return item.copyWith(isDone: true, dueDate: action.nextDueDate);
+          // Mirrors the fixed invariant in RenewalDao.markDone (scope doc
+          // §3d): `isDone` is only true for a genuinely terminal outcome
+          // (no next due date). A recurring item that just picked its next
+          // cycle is an ordinary item with a future due date, not a
+          // parked "Done" item — the overlay must show that immediately,
+          // not just the eventual DB write, or the list would flash the
+          // item into the collapsed Done section for the 6-second undo
+          // window even though it's about to re-open as Upcoming/Due
+          // soon/Overdue the moment the window commits.
+          final isTerminal = action.nextDueDate == null;
+          return item.copyWith(isDone: isTerminal, dueDate: action.nextDueDate);
         }).toList(growable: false);
     }
   }
