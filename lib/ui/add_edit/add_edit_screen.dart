@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart' as ph;
 
 import '../../data/repository/renewal_repository.dart';
 import '../../data/repository/settings_repository.dart';
@@ -6,6 +9,8 @@ import '../../domain/format/relative_date.dart';
 import '../../domain/models/custom_tier.dart';
 import '../../domain/models/renewal.dart';
 import '../../domain/models/renewal_type.dart';
+import '../../services/notifications/notification_service.dart';
+import '../../services/notifications/reconciliation_service.dart';
 import '../../theme/app_dimens.dart';
 import 'widgets/custom_tier_selector.dart';
 import 'widgets/health_check_fields.dart';
@@ -22,12 +27,23 @@ class AddEditScreen extends StatefulWidget {
     super.key,
     required this.repository,
     required this.settingsRepository,
+    required this.notificationService,
+    required this.reconciliationService,
     this.initialType,
     this.existingItem,
   });
 
   final RenewalRepository repository;
   final SettingsRepository settingsRepository;
+
+  /// Task brief items 1/6: after a successful save, this screen (a)
+  /// re-runs reconciliation so the new/edited item's schedule is armed
+  /// promptly, and (b) — creation only, and only when this was the very
+  /// first item ever added — primes the Android 13+ notification
+  /// permission, per REQ-11.1 and the task brief's explicit "after the
+  /// first item is added, not on first launch."
+  final NotificationService notificationService;
+  final ReconciliationService reconciliationService;
   final RenewalType? initialType;
   final Renewal? existingItem;
 
@@ -124,6 +140,13 @@ class _AddEditScreenState extends State<AddEditScreen> {
     final healthMonths = _type == RenewalType.healthCheck ? _healthMonths : null;
 
     try {
+      // Task brief item 6: "requested after the user adds their first
+      // item, not on first launch." Counted *before* the write below, so
+      // this genuinely reads "was the portfolio empty going into this
+      // save" rather than being thrown off by the row this save itself is
+      // about to add.
+      final isFirstItemEver = !_isEditing && await widget.repository.countAll() == 0;
+
       if (_isEditing) {
         final existing = widget.existingItem!;
         await widget.repository.updateItem(
@@ -148,6 +171,20 @@ class _AddEditScreenState extends State<AddEditScreen> {
           healthRecurrenceMonths: healthMonths,
         );
       }
+
+      // REQ-16.1 / docs/technical/04-scheduling-and-stack.md §2: a
+      // create/edit is exactly the kind of change reconciliation exists to
+      // react to (new item's ladder, or a due-date/type edit's full
+      // recompute). Not awaited before showing the saved confirmation —
+      // scheduling is a background concern from the user's point of view,
+      // and blocking the "Saved" state on it would make every save feel
+      // slower for no visible benefit.
+      unawaited(widget.reconciliationService.reconcile());
+
+      if (isFirstItemEver) {
+        unawaited(_primeNotificationPermission());
+      }
+
       if (!mounted) return;
       setState(() {
         _saving = false;
@@ -167,6 +204,53 @@ class _AddEditScreenState extends State<AddEditScreen> {
   Future<void> _dismissHealthNote() async {
     setState(() => _healthNoteDismissed = true);
     await widget.settingsRepository.dismissHealthCheckNote();
+  }
+
+  /// Task brief item 6. A stripped-down version of REQ-11.1's full
+  /// three-panel priming flow (`05-permissions.html` p1–p3): this fires the
+  /// real OS permission dialog directly (via
+  /// `flutter_local_notifications`' Android 13+ API) rather than showing
+  /// this app's own priming screen first, and denial gets a single
+  /// SnackBar with an "Open settings" action rather than REQ-11.1's
+  /// dedicated recovery screen/copy. Flagged explicitly in the developer
+  /// handoff as the minimum-viable tier of that requirement, not the full
+  /// polish — REQ-11.1's own priming-screen visuals were not built this
+  /// slice.
+  ///
+  /// Fired immediately after the save write completes (see the call site),
+  /// in parallel with the "Saved" confirmation and the ~900ms
+  /// auto-navigate-back-to-list delay already on this screen. **Known,
+  /// flagged rough edge**: because this screen auto-pops shortly after
+  /// save, the denial SnackBar below has a real chance of having nowhere
+  /// to render if the user is slow to respond to the OS dialog and the
+  /// screen has already navigated away by the time a decision comes back —
+  /// `mounted` guards prevent a crash, but the message can be silently
+  /// missed in that case. A more robust version would show that message
+  /// from Home (post-navigation) rather than from this screen; not built
+  /// this slice, flagged in the developer handoff.
+  Future<void> _primeNotificationPermission() async {
+    final granted = await widget.notificationService.requestPermission();
+    // `null` means no runtime prompt exists on this Android version at all
+    // (below API 33) — nothing to recover from, notifications already work.
+    if (granted == null || granted == true) return;
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text(
+          "Notifications are off — you can still track everything here. "
+          'Enable them anytime in your phone settings.',
+        ),
+        action: SnackBarAction(
+          label: 'Open settings',
+          onPressed: () {
+            // permission_handler's settings deep-link — REQ-11.1's
+            // "Open notification settings" affordance, without building
+            // this app's own dedicated recovery screen this slice.
+            unawaited(ph.openAppSettings());
+          },
+        ),
+      ),
+    );
   }
 
   @override

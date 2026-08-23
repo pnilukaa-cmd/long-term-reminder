@@ -1,16 +1,21 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../../data/database/notification_dao.dart';
 import '../../data/repository/renewal_repository.dart';
 import '../../data/repository/settings_repository.dart';
 import '../../domain/models/renewal.dart';
 import '../../domain/models/renewal_status.dart';
 import '../../domain/models/renewal_type.dart';
 import '../../domain/status/status_calculator.dart';
+import '../../services/notifications/notification_service.dart';
+import '../../services/notifications/reconciliation_service.dart';
 import '../../theme/app_dimens.dart';
 import '../add_edit/add_edit_screen.dart';
 import '../common/mark_done_sheet.dart';
 import '../common/undo_controller.dart';
 import '../common/undo_toast.dart';
+import '../debug/scheduled_state_debug_screen.dart';
 import 'widgets/empty_state_view.dart';
 import 'widgets/error_state_view.dart';
 import 'widgets/loading_state_view.dart';
@@ -20,17 +25,43 @@ import 'widgets/renewal_card.dart';
 /// REQ-4.3's quick-done, and REQ-5.4/§0.2's long-press delete affordance.
 /// Matches `docs/design/mockups/01-home-list.html`.
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key, required this.repository, required this.settingsRepository});
+  const HomeScreen({
+    super.key,
+    required this.repository,
+    required this.settingsRepository,
+    required this.notificationService,
+    required this.notificationDao,
+    required this.reconciliationService,
+  });
 
   final RenewalRepository repository;
   final SettingsRepository settingsRepository;
+
+  /// The three notification-layer dependencies are only used to (a)
+  /// re-trigger reconciliation after every commit this screen makes to the
+  /// database (delete/mark-done, via [UndoController]) and (b) reach the
+  /// debug-only scheduled-state screen (task item 7) — this screen itself
+  /// never calls the plugin or the DAO directly beyond that.
+  final NotificationService notificationService;
+  final NotificationDao notificationDao;
+  final ReconciliationService reconciliationService;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  late final UndoController _undoController = UndoController(widget.repository);
+  late final UndoController _undoController = UndoController(
+    widget.repository,
+    // REQ-16.1/16.2 + docs/technical/04-scheduling-and-stack.md §2: a
+    // delete or mark-done commit is exactly the kind of edit-side-effect
+    // reconciliation exists to react to (cancel a deleted item's
+    // notifications; recompute a just-cycled item's fresh ladder). Running
+    // it right after the commit, rather than waiting for next
+    // launch/periodic pass, is what keeps the gap between "the user acted"
+    // and "the schedule reflects it" as small as possible.
+    onCommitted: widget.reconciliationService.reconcile,
+  );
 
   // Reused across rebuilds rather than calling `repository.watchAll()`
   // fresh inside `build()` — the latter would hand `StreamBuilder` a new
@@ -72,7 +103,20 @@ class _HomeScreenState extends State<HomeScreen> {
         builder: (context) => AddEditScreen(
           repository: widget.repository,
           settingsRepository: widget.settingsRepository,
+          notificationService: widget.notificationService,
+          reconciliationService: widget.reconciliationService,
           initialType: initialType,
+        ),
+      ),
+    );
+  }
+
+  void _openDebugScreen() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ScheduledStateDebugScreen(
+          notificationDao: widget.notificationDao,
+          notificationService: widget.notificationService,
         ),
       ),
     );
@@ -84,6 +128,17 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('Your renewals'),
         actions: [
+          // Task item 7 — debug-only entry point to the scheduled-state
+          // screen. `kDebugMode`-gated rather than routed through Settings
+          // (Settings itself is out of scope for this slice) so it's
+          // reachable during device testing without inventing a home for
+          // it that would need to be torn out before release.
+          if (kDebugMode)
+            IconButton(
+              icon: const Icon(Icons.bug_report_outlined),
+              tooltip: 'Scheduled state (debug)',
+              onPressed: _openDebugScreen,
+            ),
           IconButton(
             icon: const Icon(Icons.settings_outlined),
             tooltip: 'Settings',

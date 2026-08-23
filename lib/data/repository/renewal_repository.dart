@@ -24,6 +24,19 @@ class RenewalRepository {
     return row == null ? null : _toDomain(row);
   }
 
+  /// A single current snapshot (as opposed to [watchAll]'s live stream) —
+  /// what the reconciliation pass actually needs per run.
+  Future<List<Renewal>> getAllOnce() async {
+    final rows = await _dao.getAllItemsOnce();
+    return rows.map(_toDomain).toList(growable: false);
+  }
+
+  /// Used to gate the Android 13+ notification-permission prompt: primed
+  /// after the user's *first* item is added, not on first launch (per the
+  /// task brief). Callers should check this *before* calling [createItem]
+  /// (i.e. "was the portfolio empty going into this save").
+  Future<int> countAll() => _dao.countAll();
+
   Future<int> createItem({
     required RenewalType type,
     required String label,

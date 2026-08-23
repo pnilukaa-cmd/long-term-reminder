@@ -16,6 +16,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:long_term_reminder/data/database/app_database.dart';
 import 'package:long_term_reminder/data/repository/renewal_repository.dart';
 import 'package:long_term_reminder/data/repository/settings_repository.dart';
+import 'package:long_term_reminder/services/notifications/notification_service.dart';
+import 'package:long_term_reminder/services/notifications/reconciliation_service.dart';
 import 'package:long_term_reminder/theme/app_theme.dart';
 import 'package:long_term_reminder/ui/home/home_screen.dart';
 
@@ -26,11 +28,26 @@ void main() {
 
     final renewalRepository = RenewalRepository(database.renewalDao);
     final settingsRepository = SettingsRepository(database.settingsDao);
+    // Never `.init()`-ed — this smoke test never triggers a save/delete/
+    // mark-done, so these are only here to satisfy required constructor
+    // parameters, same rationale as add_edit_screen_test.dart.
+    final notificationService = NotificationService();
+    final reconciliationService = ReconciliationService(
+      renewalRepository: renewalRepository,
+      notificationDao: database.notificationDao,
+      notificationService: notificationService,
+    );
 
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light(),
-        home: HomeScreen(repository: renewalRepository, settingsRepository: settingsRepository),
+        home: HomeScreen(
+          repository: renewalRepository,
+          settingsRepository: settingsRepository,
+          notificationService: notificationService,
+          notificationDao: database.notificationDao,
+          reconciliationService: reconciliationService,
+        ),
       ),
     );
 

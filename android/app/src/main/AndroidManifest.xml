@@ -1,4 +1,20 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Android 13+ runtime permission for posting notifications at all
+         (REQ-11.1 / task brief item 6). `flutter_local_notifications` and
+         `permission_handler` both auto-merge this into the manifest on
+         their own, but declaring it explicitly here documents the
+         dependency rather than leaving it implicit in a third-party
+         package's own manifest. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- Lets the boot receivers below (and `workmanager`'s own
+         reboot-persistence, per the scheduling ADR §2) actually run —
+         without this, `BOOT_COMPLETED` is never delivered to the app at
+         all. Task brief item 3. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <!-- `workmanager`'s periodic reconciliation task (task brief item 2)
+         needs to briefly hold a wake lock to run its work reliably when
+         the device would otherwise be asleep. -->
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <application
         android:label="long_term_reminder"
         android:name="${applicationName}"
@@ -30,6 +46,40 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+
+        <!-- Task brief item 3 ("a boot receiver so a reboot triggers
+             rescheduling"). `flutter_local_notifications`' own documented
+             boot-survival mechanism: on BOOT_COMPLETED, the plugin
+             re-registers every notification it previously scheduled via
+             `zonedSchedule`, using its own internal persisted record (kept
+             independently of this app's `scheduled_notifications` table).
+             This is a real, complementary mechanism to `workmanager`'s
+             own reboot-persistence (used for the periodic reconciliation
+             task, registered separately — see
+             `workmanager_dispatcher.dart`'s doc comment on why the two
+             aren't redundant): this receiver re-arms individual alarms
+             immediately on boot, rather than waiting for the next
+             (up-to-24h-away) periodic reconciliation window or the user
+             next opening the app.
+
+             UNVERIFIED: the exact receiver class names below are
+             transcribed from `flutter_local_notifications`' documented
+             AndroidManifest setup instructions for its Android 13/14+
+             plugin generation, not confirmed against the actual installed
+             package version in this environment (no SDK/pub.dev access
+             here — see pubspec.yaml's caveat on this package). If the
+             installed version's class names differ, this is a likely
+             first-build failure — check
+             `flutter_local_notifications`' current README for the
+             exact manifest snippet it expects before relying on this. -->
+        <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                <action android:name="android.intent.action.QUICKBOOT_POWERON"/>
+            </intent-filter>
+        </receiver>
+        <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"/>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

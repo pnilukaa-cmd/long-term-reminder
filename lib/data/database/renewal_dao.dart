@@ -20,6 +20,24 @@ class RenewalDao extends DatabaseAccessor<AppDatabase> with _$RenewalDaoMixin {
 
   Future<RenewalItem?> getItemById(int id) => (select(renewalItems)..where((t) => t.id.equals(id))).getSingleOrNull();
 
+  /// Every item, once — as opposed to [watchAllItems]'s live stream. Used
+  /// by the reconciliation pass (which needs a single current snapshot per
+  /// run, not a subscription) and by the "is this the user's very first
+  /// item" check that gates the Android 13+ notification-permission prompt
+  /// (per the task brief: primed after the first item is added, not on
+  /// first launch).
+  Future<List<RenewalItem>> getAllItemsOnce() => select(renewalItems).get();
+
+  /// Cheap at this app's realistic scale (a personal renewal tracker; not
+  /// thousands of rows) — a plain row count via drift's `count()`
+  /// aggregate rather than materializing every row just to measure it.
+  Future<int> countAll() async {
+    final countExp = renewalItems.id.count();
+    final query = selectOnly(renewalItems)..addColumns([countExp]);
+    final row = await query.getSingle();
+    return row.read(countExp) ?? 0;
+  }
+
   Future<int> insertItem(RenewalItemsCompanion entry) => into(renewalItems).insert(entry);
 
   /// Full-row replace, used by edit (REQ-16.1) — the caller is responsible

@@ -81,6 +81,13 @@ dependencies:
   # this is what lets a timezone change actually take effect rather than
   # freezing to whatever zone was active at first launch.
   flutter_timezone: ^1.0.8
+  # permission_handler: added this slice, specifically for REQ-11.1's
+  # "Open notification settings" deep link on denial
+  # (`ph.openAppSettings()`) — `flutter_local_notifications`' own
+  # `requestNotificationsPermission()` covers the Android 13+ request
+  # itself, but has no equivalent for opening the OS settings page.
+  # Same unverified-version caveat as every other addition in this block.
+  permission_handler: ^11.3.1
 
 dev_dependencies:
   flutter_test:

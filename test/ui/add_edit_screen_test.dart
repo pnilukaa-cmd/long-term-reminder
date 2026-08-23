@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:long_term_reminder/data/database/app_database.dart';
 import 'package:long_term_reminder/data/repository/renewal_repository.dart';
 import 'package:long_term_reminder/data/repository/settings_repository.dart';
+import 'package:long_term_reminder/services/notifications/notification_service.dart';
+import 'package:long_term_reminder/services/notifications/reconciliation_service.dart';
 import 'package:long_term_reminder/theme/app_theme.dart';
 import 'package:long_term_reminder/ui/add_edit/add_edit_screen.dart';
 
@@ -14,11 +16,25 @@ void main() {
   tearDown(() => database.close());
 
   Widget buildScreen() {
+    final renewalRepository = RenewalRepository(database.renewalDao);
+    // Deliberately never `.init()`-ed: none of the cases in this file tap
+    // Save, so `_handleSave`'s calls into these two never actually fire —
+    // they only need to exist to satisfy the constructor's required
+    // parameters. A test that *does* exercise Save would need a real
+    // (fake/mocked) plugin, which this slice doesn't set up — flagged in
+    // the developer handoff as untested territory.
+    final notificationService = NotificationService();
     return MaterialApp(
       theme: AppTheme.light(),
       home: AddEditScreen(
-        repository: RenewalRepository(database.renewalDao),
+        repository: renewalRepository,
         settingsRepository: SettingsRepository(database.settingsDao),
+        notificationService: notificationService,
+        reconciliationService: ReconciliationService(
+          renewalRepository: renewalRepository,
+          notificationDao: database.notificationDao,
+          notificationService: notificationService,
+        ),
       ),
     );
   }

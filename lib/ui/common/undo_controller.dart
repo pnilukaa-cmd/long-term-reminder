@@ -58,9 +58,18 @@ class PendingUndoAction {
 ///   pending commits the old one immediately, then starts a fresh window
 ///   for the new one.
 class UndoController extends ChangeNotifier {
-  UndoController(this._repository);
+  UndoController(this._repository, {this.onCommitted});
 
   final RenewalRepository _repository;
+
+  /// Invoked after a pending action's database write actually lands
+  /// (window lapsed, or superseded by a new action — see
+  /// `_commitPendingIfAny`). Optional so this class stays usable without a
+  /// notification layer (e.g. in tests); `HomeScreen` wires this to
+  /// `ReconciliationService.reconcile` so a delete/mark-done commit's
+  /// scheduling side effects (REQ-16.1/16.2) happen promptly rather than
+  /// waiting for the next app launch or periodic pass.
+  final Future<void> Function()? onCommitted;
 
   static const Duration undoWindow = Duration(seconds: 6);
 
@@ -142,6 +151,7 @@ class UndoController extends ChangeNotifier {
       case PendingActionType.markDone:
         await _repository.commitMarkDone(action.item.id, nextDueDate: action.nextDueDate);
     }
+    await onCommitted?.call();
   }
 
   @override
