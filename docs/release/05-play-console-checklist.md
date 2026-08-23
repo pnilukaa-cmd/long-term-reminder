@@ -2,6 +2,8 @@
 
 **Confidence note:** the Play policy facts below were gathered during this project's research phase from secondary sources — `support.google.com` and `play.google.com` were blocked by the research environment's network proxy, so nothing here was read from Google's own documentation directly. The high-confidence items (the $25 fee, the 12-tester/14-day rule) had three or more independent sources converging. Treat everything as a map, not the territory: verify each step against the actual Play Console as you reach it, and correct this file when reality differs.
 
+**Status, 23 Aug 2026:** developer account created, paid and identity-verified. The binding constraint is now tester recruitment — see Phase 0.
+
 **The one scheduling fact that governs everything:** a personal developer account created after November 2023 must run a closed test with **12 testers, continuously opted in for 14 consecutive days**, before it can apply for production access. That is calendar time on the critical path. Nothing else in this document can shorten it.
 
 ---
@@ -12,8 +14,8 @@ None of this needs finished code, and some of it has multi-day turnaround. Doing
 
 - [ ] **Recruit 12 testers.** Real people with Android devices and Google accounts, willing to install the app and *leave it installed* for 14 straight days. Collect the Google account email address each will use — that is what the closed track needs, not their phone number or usual email.
 - [ ] **Run the monetisation concept check** with those same people while you have their attention. Describe the free tier (one well-timed reminder per item) against the paid unlock (the escalating ladder plus overdue follow-through), and ask whether that is worth £3–5. This tests the weakest-evidenced assumption in the project — see `docs/product/01-v1-scope.md` §4 — and it costs one extra sentence in a conversation you are already having.
-- [ ] **Create the Play Console developer account.** One-time $25 registration fee.
-- [ ] **Complete identity verification.** Personal accounts require government-issued photo ID and proof of address. This can take days and blocks everything downstream, so start it early.
+- [x] **Create the Play Console developer account.** One-time $25 registration fee. *(Done, 23 Aug 2026.)*
+- [x] **Complete identity verification.** Personal accounts require government-issued photo ID and proof of address. *(Done, 23 Aug 2026 — this was the longest lead-time item and it is cleared.)*
 - [ ] **Set up a payment profile** and choose local-currency electronic payouts if offered — the payout threshold drops from $100 (wire) to around $1.
 - [ ] **Write and host a privacy policy.** A live, reachable URL is a submission requirement. For a local-only app this is short and honest: what is stored, that it stays on the device, that nothing is transmitted. See the caveat below about purchase verification.
 
