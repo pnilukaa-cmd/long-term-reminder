@@ -154,6 +154,11 @@ class NotificationService {
         ),
       ),
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      // Required by flutter_local_notifications 18's `zonedSchedule`. iOS-only
+      // semantics (how a wall-clock time is read across a timezone change);
+      // absoluteTime is the correct reading for a reminder tied to a real
+      // date rather than to a local time-of-day ritual. Inert on Android.
+      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
       payload: desired.renewalId.toString(),
     );
   }

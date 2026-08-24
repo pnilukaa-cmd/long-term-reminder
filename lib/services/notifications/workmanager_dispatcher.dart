@@ -28,8 +28,14 @@ Future<void> registerPeriodicReconciliation() {
     reconciliationTaskName,
     reconciliationTaskName,
     frequency: const Duration(hours: 24),
-    existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
-    constraints: Constraints(networkType: NetworkType.notRequired),
+    // workmanager 0.6.0 names this enum `ExistingWorkPolicy`;
+    // `ExistingPeriodicWorkPolicy` only exists in later majors. `keep` so a
+    // re-register does not reset the 24h cycle.
+    existingWorkPolicy: ExistingWorkPolicy.keep,
+    // No constraints at all: reconciliation reads the local database and
+    // re-arms local alarms, so it needs no network, no charger and no idle
+    // window. Omitting `constraints` is both the default and one less
+    // version-sensitive enum spelling to get wrong.
   );
 }
 

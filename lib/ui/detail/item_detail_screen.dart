@@ -71,7 +71,7 @@ class ItemDetailScreen extends StatefulWidget {
 }
 
 class _ItemDetailScreenState extends State<ItemDetailScreen> {
-  late Stream<Renewal?> _itemStream = widget.repository.watchById(widget.itemId);
+  late final Stream<Renewal?> _itemStream = widget.repository.watchById(widget.itemId);
 
   late final UndoController _undoController = UndoController(
     widget.repository,
